@@ -140,19 +140,20 @@ delimiter — used for an inner if/else nested inside an already-inactive
 outer arm, since Java can't nest `/* */` — is intentional, not corruption;
 it predates this session and was not touched.)
 
-## Single merged jar (Forgix)
+## Single merged jar (Forgix) — independently re-verified, decision: per-loader jars
 
-Not yet independently re-verified for ToroHealth in this session. Prior
-finding from the sibling `EasierVillagerTrading` port: Forgix
-(`PacifistMC/Forgix`) is actively maintained, but its usage/setup assumes
-static, hand-declared per-loader subprojects, which sits awkwardly against
-Stonecutter/Stonecraft's dynamically generated `versions/<mc>-<loader>`
-subprojects — EVT shipped per-loader jars instead of a merged jar. Default
-assumption for ToroHealth is the same (ship per-loader jars from
-`versions/*/build/libs/`) unless re-investigation below finds Stonecraft
-added first-class Forgix support since then. Will re-check before the
-final report and update this section with a live verification, not just a
-carry-over assumption.
+Re-checked directly for this repo rather than carried over from
+`EasierVillagerTrading`: as of this pass, neither side has closed the gap.
+Stonecraft's own docs (`stonecraft.meza.gg/docs/releasing-mods`,
+`github.com/meza/Stonecraft`) document a **per-loader** publishing flow
+with no mention of Forgix/merged/universal jars anywhere in the README,
+docs site, or issue tracker. Forgix (`github.com/PacifistMC/Forgix`)'s own
+README only shows configuration against static, hand-named subprojects
+(e.g. `project(":fabric")`) and has no mention of Stonecutter/Stonecraft in
+its README or issues either. This is a persistent tooling mismatch, not a
+recently-introduced or recently-fixed one. **Decision**: ship per-loader
+jars from `versions/*/build/libs/` (matching Stonecraft's own documented
+flow) rather than attempting a Forgix merge.
 
 ## Per-version porting notes
 
@@ -211,8 +212,9 @@ lifecycle/rendering events have been stable since well before 1.18).
     `RenderGameOverlayEvent` Forge-GUI-overlay delta below).
 11. ✅ 26.2-fabric green build (jar-verified, 41 classes).
 12. ✅ 26.2-neoforge green build (jar-verified, 42 classes).
-13. ☐ Forgix re-verified for this repo; decision recorded.
-14. ☐ Final report delivered.
+13. ✅ Forgix re-verified for this repo; decision recorded (ship per-loader
+    jars — see "Single merged jar (Forgix)" above).
+14. ✅ Final report delivered.
 
 ## Parked commits — RESOLVED, landed and pushed
 
@@ -236,8 +238,9 @@ disregarded — their content is now in git history.
   `origin/main` (see "Parked commits" above).
 - 26.2 is now green on both cells (see "26.2" section above for the full
   applied API-delta list and the Stonecutter live-sync corruption gotcha).
-- Forgix composability with Stonecraft not yet independently re-verified
-  for this repo (see "Single merged jar (Forgix)" above).
+- Forgix composability with Stonecraft: resolved — independently
+  re-verified, no first-class support either direction, decision recorded
+  (see "Single merged jar (Forgix)" above).
 - `ConfigLoader`'s constructor takes its config directory as a `File`
   parameter (resolved) — this was the original open problem and is
   resolved; kept here as a historical note since `CLAUDE.md` still
