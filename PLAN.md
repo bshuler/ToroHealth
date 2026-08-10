@@ -40,9 +40,8 @@ recorded below — never silently dropped from the matrix.
 real mod classes are present (31-42 classes per jar depending on cell), not
 just a green-but-empty jar. 26.2-fabric (41 classes) and 26.2-neoforge (42
 classes) are the newest additions — see "26.2" below for the full API-delta
-list. Work is committed locally but **not yet pushed** — see "Parked
-commits" below; 1Password commit signing is currently unavailable in this
-environment.
+list. All work is committed and pushed to `origin/main` — see "Parked
+commits" below for how the earlier signing outage was resolved.
 
 Newest stable MC confirmed live against
 `https://meta.fabricmc.net/v2/versions/game` at task start: **26.2**
@@ -215,42 +214,26 @@ lifecycle/rendering events have been stable since well before 1.18).
 13. ☐ Forgix re-verified for this repo; decision recorded.
 14. ☐ Final report delivered.
 
-## Parked commits (1Password commit signing unavailable)
+## Parked commits — RESOLVED, landed and pushed
 
-`git commit` failed twice in this environment with two different 1Password
-agent errors (`agent returned an error`, then `failed to fill whole
-buffer`) — the signing agent is genuinely down right now, not a one-off.
-Per the binding git-signing rule, signing was never bypassed; instead the
-already-staged work was parked as commit messages + exact retry commands
-in the scratchpad, to be replayed on a future human turn once signing
-recovers:
-
-1. `/private/tmp/claude-501/-Users-bshuler-code/3309436f-5239-4605-ab94-a3e38563bb44/scratchpad/torohealth-parked-commit-canvas-abstraction.txt` —
-   `refactor: introduce HudCanvas abstraction for cross-era HUD rendering`
-   (`render/HudCanvas.java`, `render/PlatformHudCanvas.java`,
-   `display/BarDisplay.java`, `display/EntityDisplay.java`,
-   `display/Hud.java`). Land **first**.
-2. `/private/tmp/claude-501/-Users-bshuler-code/3309436f-5239-4605-ab94-a3e38563bb44/scratchpad/torohealth-parked-commit-1182-cross-version-fixes.txt` —
-   `fix: port cross-version API deltas so 1.18.2 and 1.19.4/1.20.1-forge build green`
-   (`ClientEventHandler.java`, `ToroHealth.java`,
-   `bars/HealthBarRenderer.java`, `bars/ParticleRenderer.java`,
-   `client/ConfigScreen.java`, `util/RayTrace.java`,
-   `stonecutter.gradle.kts`). Land **second** (depends on #1's
-   `Hud.java`/`render/` state).
-3. `/private/tmp/claude-501/-Users-bshuler-code/3309436f-5239-4605-ab94-a3e38563bb44/scratchpad/torohealth-parked-commit-1.20.1-fabric.txt` —
-   an older, narrower parked commit from an earlier session, predates both
-   of the above and never landed. Diff its listed fixes
-   (`ConfigScreen.java`/`ClientEventHandler.java`/`HealthBarRenderer.java`)
-   against the current working tree before replaying — it may already be
-   superseded by #1/#2 above.
-
-Once landed, `git push origin main` directly (no PR, per the house git
-rule) — nothing here needs review, only unblocking.
+1Password commit signing was down for a period (`agent returned an error`,
+then `failed to fill whole buffer`) and several rounds of work were parked
+as commit-message drafts in the scratchpad rather than bypassing signing.
+Signing recovered on a later attempt: the parked canvas-abstraction and
+cross-version-fix content, plus this session's own 26.2 port and
+corruption fix, landed as two commits
+(`5641918` — canvas abstraction, `44b6b96` — 26.2 port + cross-version
+fixes) and were pushed to `origin/main` directly (no PR, per house git
+rule). The old scratchpad drafts
+(`torohealth-parked-commit-canvas-abstraction.txt`,
+`torohealth-parked-commit-1182-cross-version-fixes.txt`,
+`torohealth-parked-commit-1.20.1-fabric.txt`) are superseded and can be
+disregarded — their content is now in git history.
 
 ## Open problems (live)
 
-- Git commits are currently **parked, not pushed** — see "Parked commits"
-  above. Retry on a future turn; do not poll or bypass signing.
+- Git commits: resolved — signing recovered and all work is pushed to
+  `origin/main` (see "Parked commits" above).
 - 26.2 is now green on both cells (see "26.2" section above for the full
   applied API-delta list and the Stonecutter live-sync corruption gotcha).
 - Forgix composability with Stonecraft not yet independently re-verified
