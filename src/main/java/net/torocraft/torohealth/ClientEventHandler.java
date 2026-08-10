@@ -10,6 +10,7 @@ import net.torocraft.torohealth.util.HoldingWeaponUpdater;
 //? if fabric {
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 //?} elif neoforge {
 /*import net.minecraft.client.DeltaTracker;
@@ -54,7 +55,7 @@ public class ClientEventHandler {
         client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
   }
 
-  private static void onWorldRenderAfterTranslucent(WorldRenderEvents.AfterTranslucent context) {
+  private static void onWorldRenderAfterTranslucent(WorldRenderContext context) {
     HealthBarRenderer.renderInWorld(context.tickCounter().getGameTimeDeltaPartialTick(false),
         context.matrixStack(), context.camera());
     ParticleRenderer.renderParticles(context.matrixStack(), context.camera());
@@ -77,8 +78,8 @@ public class ClientEventHandler {
       if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
         return;
       }
-      HealthBarRenderer.renderInWorld(event.getPartialTick(), event.getPoseStack(),
-          event.getCamera());
+      HealthBarRenderer.renderInWorld(event.getPartialTick().getGameTimeDeltaPartialTick(false),
+          event.getPoseStack(), event.getCamera());
       ParticleRenderer.renderParticles(event.getPoseStack(), event.getCamera());
     }
 

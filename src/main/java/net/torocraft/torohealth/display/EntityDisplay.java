@@ -31,9 +31,15 @@ public class EntityDisplay {
   public void draw(GuiGraphics guiGraphics, float scale, float absoluteX, float absoluteY) {
     if (entity != null) {
       try {
-        int x = (int) (absoluteX + xOffset);
-        int y = (int) (absoluteY + yOffset);
-        float entitySize = entityScale * scale;
+        float x = absoluteX + xOffset;
+        float y = absoluteY + yOffset;
+        // MC 1.21.4's InventoryScreen.renderEntityInInventory takes a center
+        // point + a single scale factor (not a bounding box + separate size
+        // like older/newer MC releases) - the scale is in the same units as
+        // Entity#getScale(), so divide our target render size by it, mirroring
+        // InventoryScreen.renderEntityInInventoryFollowsMouse's own math.
+        float renderSize = entityScale * scale;
+        float entityScaleFactor = renderSize / entity.getScale();
 
         Vector3f translation = new Vector3f(0.0F, 0.0F, 0.0F);
         Quaternionf rotation = new Quaternionf()
@@ -42,9 +48,8 @@ public class EntityDisplay {
 
         InventoryScreen.renderEntityInInventory(
             guiGraphics,
-            x - 10, y - 20,
-            x + 10, y + 20,
-            entitySize,
+            x, y,
+            entityScaleFactor,
             translation,
             rotation,
             null,

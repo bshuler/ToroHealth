@@ -3,7 +3,7 @@ package net.torocraft.torohealth.display;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -124,32 +124,31 @@ public class Hud extends Screen {
     }
 
     var matrix = guiGraphics.pose();
-    matrix.pushMatrix();
+    matrix.pushPose();
 
-    matrix.translate(finalX, finalY);
-    matrix.scale(scale, scale);
+    matrix.translate(finalX, finalY, 0.0f);
+    matrix.scale(scale, scale, 1.0f);
 
-    matrix.translate(-10, -10);
+    matrix.translate(-10.0f, -10.0f, 0.0f);
     if (config.hud.showSkin) {
       this.drawSkin(guiGraphics);
     }
-    matrix.translate(10, 10);
+    matrix.translate(10.0f, 10.0f, 0.0f);
 
     if (config.hud.showEntity) {
       entityDisplay.draw(guiGraphics, scale, finalX, finalY);
     }
 
-    matrix.translate(44, 0);
+    matrix.translate(44.0f, 0.0f, 0.0f);
     if (config.hud.showBar) {
       barDisplay.draw(guiGraphics, entity);
     }
 
-    matrix.popMatrix();
+    matrix.popPose();
   }
 
   private void drawSkin(GuiGraphics guiGraphics) {
     int w = 160, h = 60;
-    guiGraphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND_TEXTURE, 0, 0, 0.0f, 0.0f, w, h, w,
-        h, w, h);
+    guiGraphics.blit(RenderType::guiTextured, BACKGROUND_TEXTURE, 0, 0, 0.0f, 0.0f, w, h, w, h);
   }
 }

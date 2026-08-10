@@ -29,12 +29,15 @@ import net.minecraftforge.fml.loading.FMLPaths;
  * {@code FabricLoader.getConfigDir()} vs. NeoForge/Forge's
  * {@code FMLPaths.CONFIGDIR}), so it lives here rather than in
  * {@code ConfigLoader} itself — see CLAUDE.md, "src/main vs src/client".
+ *
+ * <p>{@code @Mod} must annotate the class itself (not a constructor), so
+ * NeoForge/Forge need their own class declaration line - the whole class
+ * body is therefore Stonecutter-conditioned per loader rather than just the
+ * constructor, mirroring the house template (critical-orientation's
+ * OrientationClient.java).
  */
-public class ToroHealth
 //? if fabric {
-implements ClientModInitializer
-//?}
-{
+public class ToroHealth implements ClientModInitializer {
 
   public static final String MODID = "torohealth";
   public static final Logger LOGGER = LogUtils.getLogger();
@@ -64,21 +67,82 @@ implements ClientModInitializer
     configLoader.load();
   }
 
-  //? if fabric {
   @Override
   public void onInitializeClient() {
     loadConfig(FabricLoader.getInstance().getConfigDir().toFile());
     ClientEventHandler.register();
   }
-  //?} elif neoforge {
-  /*@Mod(MODID)
+}
+//?} elif neoforge {
+/*@Mod(ToroHealth.MODID)
+public class ToroHealth {
+
+  public static final String MODID = "torohealth";
+  public static final Logger LOGGER = LogUtils.getLogger();
+  public static final Random RAND = new Random();
+
+  public static final RayTrace RAYTRACE = new RayTrace();
+  public static final Hud HUD = new Hud();
+
+  public static volatile Config CONFIG = new Config();
+  public static volatile boolean IS_HOLDING_WEAPON = false;
+
+  private static ConfigLoader<Config> configLoader;
+
+  public static ResourceLocation id(String path) {
+    return ResourceLocation.fromNamespaceAndPath(MODID, path);
+  }
+
+  public static void saveConfig() {
+    if (configLoader != null) {
+      configLoader.save(CONFIG);
+    }
+  }
+
+  private static void loadConfig(File configDir) {
+    configLoader = new ConfigLoader<>(new Config(), configDir, MODID + ".json",
+        config -> CONFIG = config);
+    configLoader.load();
+  }
+
   public ToroHealth(IEventBus modEventBus) {
     loadConfig(FMLPaths.CONFIGDIR.get().toFile());
   }
-  *///?} elif forge {
-  /*@Mod(MODID)
+}
+*///?} elif forge {
+/*@Mod(ToroHealth.MODID)
+public class ToroHealth {
+
+  public static final String MODID = "torohealth";
+  public static final Logger LOGGER = LogUtils.getLogger();
+  public static final Random RAND = new Random();
+
+  public static final RayTrace RAYTRACE = new RayTrace();
+  public static final Hud HUD = new Hud();
+
+  public static volatile Config CONFIG = new Config();
+  public static volatile boolean IS_HOLDING_WEAPON = false;
+
+  private static ConfigLoader<Config> configLoader;
+
+  public static ResourceLocation id(String path) {
+    return ResourceLocation.fromNamespaceAndPath(MODID, path);
+  }
+
+  public static void saveConfig() {
+    if (configLoader != null) {
+      configLoader.save(CONFIG);
+    }
+  }
+
+  private static void loadConfig(File configDir) {
+    configLoader = new ConfigLoader<>(new Config(), configDir, MODID + ".json",
+        config -> CONFIG = config);
+    configLoader.load();
+  }
+
   public ToroHealth() {
     loadConfig(FMLPaths.CONFIGDIR.get().toFile());
   }
-  *///?}
 }
+*///?}
