@@ -1,4 +1,3 @@
-
 # ToroHealth Damage Indicators
 
 With ToroHealth Damage Indicators, damage given, received, or mitigated will be displayed as a number that pops off of the entity.
@@ -10,22 +9,3 @@ Customization options are available for changing the color of the damage numbers
 ### [Download from here](https://minecraft.curseforge.com/projects/torohealth-damage-indicators)
 
 ![Screenshot](https://i.imgur.com/C9oBhZ5.png)
-
-
-## Development Environment Setup
-
-```
-git clone git@github.com:ToroCraft/ToroHealth.git
-cd ToroHealth
-gradle setupDecompWorkspace
-```
-
-To setup an Intellij environment:
-```
-gradle idea
-```
-
-To setup an Eclipse environment:
-```
-gradle eclipse
-```

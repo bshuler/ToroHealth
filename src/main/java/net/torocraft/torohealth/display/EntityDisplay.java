@@ -1,142 +1,124 @@
 package net.torocraft.torohealth.display;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLiving;
-import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.monster.EntityGhast;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.DiffuseLighting;
+import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.entity.EntityRenderDispatcher;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.mob.GhastEntity;
+import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Quaternion;
+import net.minecraft.util.math.Vec3f;
 
-public class EntityDisplay implements ToroHealthDisplay {
+public class EntityDisplay {
 
-  private static final int RENDER_HEIGHT = 30;
-  private static final int RENDER_WIDTH = 18;
-  private static final int PADDING = 2;
-  private static final int WIDTH = 40;
-  private static final int HEIGHT = WIDTH;
+  private static final float RENDER_HEIGHT = 30;
+  private static final float RENDER_WIDTH = 18;
+  private static final float WIDTH = 40;
+  private static final float HEIGHT = WIDTH;
 
-  private int y;
+  private LivingEntity entity;
+  private int entityScale = 1;
 
-  private float glX;
-  private float glY;
+  private float xOffset;
+  private float yOffset;
 
-  private EntityLivingBase entity;
-  private Entity leashedToEntity;
-  private float prevYawOffset;
-  private float prevYaw;
-  private float prevPitch;
-  private float prevYawHead;
-  private float prevPrevYahHead;
-  private int scale = 1;
-
-  public EntityDisplay(Minecraft mc) {
-  }
-
-  @Override
-  public void setPosition(int x, int y) {
-    this.y = y;
-    glX = (float) x + WIDTH / 2;
-    updateScale();
-  }
-
-  @Override
-  public void setEntity(EntityLivingBase entity) {
+  public void setEntity(LivingEntity entity) {
     this.entity = entity;
     updateScale();
   }
 
-  @Override
-  public void draw() {
-    try {
-      pushEntityLeasedTo();
-      pushEntityRotations();
-      glDraw();
-      popEntityRotations();
-      popEntityLeasedTo();
-    } catch (Throwable ignore) {
+  public void draw(MatrixStack matrix, float scale) {
+    if (entity != null) {
+      try {
+        drawEntity(matrix, (int) xOffset, (int) yOffset, entityScale, -80, -20, entity, scale);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
     }
   }
 
   private void updateScale() {
     if (entity == null) {
-      glY = (float) y + HEIGHT - PADDING;
       return;
     }
-    int scaleY = MathHelper.ceil(RENDER_HEIGHT / entity.height);
-    int scaleX = MathHelper.ceil(RENDER_WIDTH / entity.width);
-    scale = Math.min(scaleX, scaleY);
-    glY = (float) y + (HEIGHT / 2 + RENDER_HEIGHT / 2);
-    if (entity instanceof EntityGhast) {
-      glY -= 10;
+
+    int scaleY = MathHelper.ceil(RENDER_HEIGHT / entity.getHeight());
+    int scaleX = MathHelper.ceil(RENDER_WIDTH / entity.getWidth());
+    entityScale = Math.min(scaleX, scaleY);
+
+    if (entity instanceof ChickenEntity) {
+      entityScale *= 0.7;
+    }
+
+    if (entity instanceof VillagerEntity && entity.isSleeping()) {
+      entityScale = entity.isBaby() ? 31 : 16;
+    }
+
+    xOffset = WIDTH / 2;
+
+    yOffset = HEIGHT / 2 + RENDER_HEIGHT / 2;
+    if (entity instanceof GhastEntity) {
+      yOffset -= 10;
     }
   }
 
-  private void glDraw() {
-    GlStateManager.enableColorMaterial();
-    GlStateManager.pushMatrix();
-
-    GlStateManager.translate(glX, glY, 50.0F);
-    GlStateManager.scale((float) (-scale), (float) scale, (float) scale);
-    GlStateManager.rotate(180.0F, 0.0F, 0.0F, 1.0F);
-    GlStateManager.rotate(135.0F, 0.0F, 1.0F, 0.0F);
-    GlStateManager.rotate(-100.0F, 0.0F, 1.0F, 0.0F);
-    GlStateManager.rotate(0.0f, 1.0F, 0.0F, 0.0F);
-
-    RenderHelper.enableStandardItemLighting();
-
-    GlStateManager.translate(0.0F, 0.0F, 0.0F);
-    RenderManager rendermanager = Minecraft.getMinecraft().getRenderManager();
-    rendermanager.setPlayerViewY(180.0F);
-    rendermanager.setRenderShadow(false);
-    rendermanager.renderEntity(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
-    rendermanager.setRenderShadow(true);
-
-    GlStateManager.popMatrix();
-    RenderHelper.disableStandardItemLighting();
-    GlStateManager.disableRescaleNormal();
-    GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
-    GlStateManager.disableTexture2D();
-    GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
+  /**
+   * copied from InventoryScreen.drawEntity() to expose the matrixStack
+   */
+  public static void drawEntity(MatrixStack matrixStack2, int x, int y, int size, float mouseX,
+      float mouseY, LivingEntity entity, float scale) {
+    float f = (float) Math.atan((double) (mouseX / 40.0F));
+    float g = (float) Math.atan((double) (mouseY / 40.0F));
+    MatrixStack matrixStack = RenderSystem.getModelViewStack();
+    matrixStack.push();
+    matrixStack.translate((double) x * scale, (double) y * scale, 1050.0D * scale);
+    matrixStack.scale(1.0F, 1.0F, -1.0F);
+    RenderSystem.applyModelViewMatrix();
+    matrixStack2.push();
+    matrixStack2.translate(0.0D, 0.0D, 1000.0D);
+    matrixStack2.scale((float) size, (float) size, (float) size);
+    Quaternion quaternion = Vec3f.POSITIVE_Z.getDegreesQuaternion(180.0F);
+    Quaternion quaternion2 = Vec3f.POSITIVE_X.getDegreesQuaternion(g * 20.0F);
+    quaternion.hamiltonProduct(quaternion2);
+    matrixStack2.multiply(quaternion);
+    float h = entity.bodyYaw;
+    float i = entity.getYaw();
+    float j = entity.getPitch();
+    float k = entity.prevHeadYaw;
+    float l = entity.headYaw;
+    entity.bodyYaw = 180.0F + f * 20.0F;
+    entity.setYaw(180.0F + f * 40.0F);
+    entity.setPitch(-g * 20.0F);
+    entity.headYaw = entity.getYaw();
+    entity.prevHeadYaw = entity.getYaw();
+    DiffuseLighting.method_34742();
+    EntityRenderDispatcher entityRenderDispatcher =
+        MinecraftClient.getInstance().getEntityRenderDispatcher();
+    quaternion2.conjugate();
+    entityRenderDispatcher.setRotation(quaternion2);
+    entityRenderDispatcher.setRenderShadows(false);
+    VertexConsumerProvider.Immediate immediate =
+        MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
+    RenderSystem.runAsFancy(() -> {
+      entityRenderDispatcher.render(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, matrixStack2, immediate,
+          15728880);
+    });
+    immediate.draw();
+    entityRenderDispatcher.setRenderShadows(true);
+    entity.bodyYaw = h;
+    entity.setYaw(i);
+    entity.setPitch(j);
+    entity.prevHeadYaw = k;
+    entity.headYaw = l;
+    matrixStack.pop();
+    matrixStack2.pop();
+    RenderSystem.applyModelViewMatrix();
+    DiffuseLighting.enableGuiDepthLighting();
   }
 
-  private void popEntityLeasedTo() {
-    if (entity instanceof EntityLiving && leashedToEntity != null) {
-      ((EntityLiving) entity).setLeashHolder(leashedToEntity, false);
-      leashedToEntity = null;
-    }
-  }
-
-  private void pushEntityLeasedTo() {
-    if (entity instanceof EntityLiving) {
-      if (((EntityLiving) entity).getLeashed()) {
-        leashedToEntity = ((EntityLiving) entity).getLeashHolder();
-        ((EntityLiving) entity).setLeashHolder(null, false);
-      }
-    }
-  }
-
-  private void popEntityRotations() {
-    entity.renderYawOffset = prevYawOffset;
-    entity.rotationYaw = prevYaw;
-    entity.rotationPitch = prevPitch;
-    entity.rotationYawHead = prevYawHead;
-    entity.prevRotationYawHead = prevPrevYahHead;
-  }
-
-  private void pushEntityRotations() {
-    prevYawOffset = entity.renderYawOffset;
-    prevYaw = entity.rotationYaw;
-    prevPitch = entity.rotationPitch;
-    prevYawHead = entity.rotationYawHead;
-    prevPrevYahHead = entity.prevRotationYawHead;
-    entity.renderYawOffset = 0.0f;
-    entity.rotationYaw = 0.0f;
-    entity.rotationPitch = 0.0f;
-    entity.rotationYawHead = 0.0f;
-    entity.prevRotationYawHead = 0.0f;
-  }
 }
