@@ -6,7 +6,7 @@ build/
 out/
 classes/
 saves/
-config/
+/config/
 logs/
 options.txt
 usercache.json

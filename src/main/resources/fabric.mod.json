@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "${id}",
+  "version": "${version}",
+
+  "name": "${name}",
+  "description": "${description}",
+  "authors": [
+    "ToroCraft",
+    "Bert Shuler"
+  ],
+  "contact": {
+    "homepage": "https://github.com/bshuler/ToroHealth",
+    "sources": "https://github.com/bshuler/ToroHealth",
+    "issues": "https://github.com/bshuler/ToroHealth/issues"
+  },
+
+  "license": "GPL-3.0",
+  "icon": "icon.png",
+
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "net.torocraft.torohealth.ToroHealth"
+    ]
+  },
+
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": ">=${minecraftVersion}",
+    "java": ">=17"
+  }
+}
