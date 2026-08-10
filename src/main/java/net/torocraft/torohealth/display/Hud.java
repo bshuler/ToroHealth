@@ -1,19 +1,52 @@
 package net.torocraft.torohealth.display;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+//? if <1.19 {
+/*import net.minecraft.network.chat.TextComponent;
+*///?}
+//? if >=26.1 {
+import net.minecraft.resources.Identifier;
+//?} else {
+/*import net.minecraft.resources.ResourceLocation;
+*///?}
 import net.minecraft.world.entity.LivingEntity;
 import net.torocraft.torohealth.ToroHealth;
 import net.torocraft.torohealth.config.Config;
 import net.torocraft.torohealth.config.Config.AnchorPoint;
+import net.torocraft.torohealth.render.HudCanvas;
+import net.torocraft.torohealth.render.PlatformHudCanvas;
 
+//? if <1.20 {
+/*import com.mojang.blaze3d.vertex.PoseStack;
+*///?} elif >=26.1 {
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//?} else {
+/*import net.minecraft.client.gui.GuiGraphics;
+*///?}
+
+/**
+ * The public entry point ({@link #draw(HudCanvas, float, int, int)}'s two
+ * per-era overloads below) is the only place this class still branches on a
+ * Stonecutter condition - it exists purely to construct the right
+ * {@link PlatformHudCanvas} for whatever context the caller was handed
+ * ({@code PoseStack} pre-1.20, {@code GuiGraphics} otherwise; see
+ * {@code ClientEventHandler}). Every method below that is private takes
+ * {@link HudCanvas} and carries zero version conditionals of its own,
+ * mirroring the sibling mod FlightHud's canvas-abstraction pattern.
+ */
 public class Hud extends Screen {
-  private static final ResourceLocation BACKGROUND_TEXTURE =
+  //? if >=26.1 {
+  private static final Identifier BACKGROUND_TEXTURE =
+      Identifier.fromNamespaceAndPath(ToroHealth.MODID, "textures/gui/default_skin_basic.png");
+  //?} elif >=1.21 {
+  /*private static final ResourceLocation BACKGROUND_TEXTURE =
       ResourceLocation.fromNamespaceAndPath(ToroHealth.MODID, "textures/gui/default_skin_basic.png");
+  *///?} else {
+  /*private static final ResourceLocation BACKGROUND_TEXTURE =
+      new ResourceLocation(ToroHealth.MODID, "textures/gui/default_skin_basic.png");
+  *///?}
   private final EntityDisplay entityDisplay = new EntityDisplay();
   private final BarDisplay barDisplay = new BarDisplay();
   private LivingEntity entity;
@@ -21,18 +54,43 @@ public class Hud extends Screen {
   private int age;
 
   public Hud() {
-    super(Component.literal("ToroHealth HUD"));
+    //? if <1.19 {
+    /*super(new TextComponent("ToroHealth HUD"));
     this.minecraft = Minecraft.getInstance();
+    *///?} elif >=26.1 {
+    // Screen.minecraft is `final` in 26.2 (confirmed via javap); the new
+    // 3-arg Screen(Minecraft, Font, Component) constructor lets a subclass
+    // supply it at construction time instead of assigning the field
+    // afterward, which no longer compiles against a final field.
+    super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("ToroHealth HUD"));
+    //?} else {
+    /*super(Component.literal("ToroHealth HUD"));
+    this.minecraft = Minecraft.getInstance();
+    *///?}
   }
 
-  public void draw(GuiGraphics guiGraphics, float partialTick, int width, int height) {
+  //? if <1.20 {
+  /*public void draw(PoseStack poseStack, float partialTick, int width, int height) {
+    draw(new PlatformHudCanvas(poseStack), partialTick, width, height);
+  }
+  *///?} elif >=26.1 {
+  public void draw(GuiGraphicsExtractor guiGraphics, float partialTick, int width, int height) {
+    draw(new PlatformHudCanvas(guiGraphics), partialTick, width, height);
+  }
+  //?} else {
+  /*public void draw(GuiGraphics guiGraphics, float partialTick, int width, int height) {
+    draw(new PlatformHudCanvas(guiGraphics), partialTick, width, height);
+  }
+  *///?}
+
+  private void draw(HudCanvas canvas, float partialTick, int width, int height) {
     this.config = ToroHealth.CONFIG;
     if (this.config == null) {
       this.config = new Config();
     }
     float x = determineX();
     float y = determineY();
-    draw(guiGraphics, x, y, config.hud.scale);
+    draw(canvas, x, y, config.hud.scale);
   }
 
   private float determineX() {
@@ -96,7 +154,7 @@ public class Hud extends Screen {
     return entity;
   }
 
-  private void draw(GuiGraphics guiGraphics, float x, float y, float scale) {
+  private void draw(HudCanvas canvas, float x, float y, float scale) {
     if (entity == null) {
       return;
     }
@@ -123,32 +181,31 @@ public class Hud extends Screen {
       finalY = y - hudHeight;
     }
 
-    var matrix = guiGraphics.pose();
-    matrix.pushPose();
+    canvas.pushPose();
 
-    matrix.translate(finalX, finalY, 0.0f);
-    matrix.scale(scale, scale, 1.0f);
+    canvas.translate(finalX, finalY, 0.0f);
+    canvas.scale(scale, scale, 1.0f);
 
-    matrix.translate(-10.0f, -10.0f, 0.0f);
+    canvas.translate(-10.0f, -10.0f, 0.0f);
     if (config.hud.showSkin) {
-      this.drawSkin(guiGraphics);
+      this.drawSkin(canvas);
     }
-    matrix.translate(10.0f, 10.0f, 0.0f);
+    canvas.translate(10.0f, 10.0f, 0.0f);
 
     if (config.hud.showEntity) {
-      entityDisplay.draw(guiGraphics, scale, finalX, finalY);
+      entityDisplay.draw(canvas, scale, finalX, finalY);
     }
 
-    matrix.translate(44.0f, 0.0f, 0.0f);
+    canvas.translate(44.0f, 0.0f, 0.0f);
     if (config.hud.showBar) {
-      barDisplay.draw(guiGraphics, entity);
+      barDisplay.draw(canvas, entity);
     }
 
-    matrix.popPose();
+    canvas.popPose();
   }
 
-  private void drawSkin(GuiGraphics guiGraphics) {
+  private void drawSkin(HudCanvas canvas) {
     int w = 160, h = 60;
-    guiGraphics.blit(RenderType::guiTextured, BACKGROUND_TEXTURE, 0, 0, 0.0f, 0.0f, w, h, w, h);
+    canvas.blitBackground(BACKGROUND_TEXTURE, 0, 0, 0.0f, 0.0f, w, h, w, h);
   }
 }

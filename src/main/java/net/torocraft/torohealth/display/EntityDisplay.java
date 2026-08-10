@@ -1,15 +1,29 @@
 package net.torocraft.torohealth.display;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.animal.Chicken;
+//? if >=26.1 {
+// 26.2 moved these two entity classes into new dedicated sub-packages
+// (confirmed via javap against the real minecraft-merged-deobf-26.2.jar);
+// Ghast stayed put.
+import net.minecraft.world.entity.animal.chicken.Chicken;
+//?} else {
+/*import net.minecraft.world.entity.animal.Chicken;
+*///?}
 import net.minecraft.world.entity.monster.Ghast;
-import net.minecraft.world.entity.npc.Villager;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
+//? if >=26.1 {
+import net.minecraft.world.entity.npc.villager.Villager;
+//?} else {
+/*import net.minecraft.world.entity.npc.Villager;
+*///?}
+import net.torocraft.torohealth.render.HudCanvas;
 
+/**
+ * No Stonecutter conditionals here - every version-specific detail of
+ * {@code InventoryScreen.renderEntityInInventory}'s four incompatible
+ * shapes (1.18.2 / 1.19.4 / 1.20.1 / &gt;=1.21) lives behind
+ * {@link HudCanvas#renderEntity} in {@code PlatformHudCanvas} instead.
+ */
 public class EntityDisplay {
 
   private static final float RENDER_HEIGHT = 30;
@@ -28,42 +42,26 @@ public class EntityDisplay {
     updateScale();
   }
 
-  public void draw(GuiGraphics guiGraphics, float scale, float absoluteX, float absoluteY) {
+  public void draw(HudCanvas canvas, float scale, float absoluteX, float absoluteY) {
     if (entity != null) {
       try {
         float x = absoluteX + xOffset;
         float y = absoluteY + yOffset;
-        // MC 1.21.4's InventoryScreen.renderEntityInInventory takes a center
-        // point + a single scale factor (not a bounding box + separate size
-        // like older/newer MC releases) - the scale is in the same units as
+        // HudCanvas#renderEntity's scale is in the same units as
         // Entity#getScale(), so divide our target render size by it, mirroring
         // InventoryScreen.renderEntityInInventoryFollowsMouse's own math.
         float renderSize = entityScale * scale;
         float entityScaleFactor = renderSize / entity.getScale();
 
-        Vector3f translation = new Vector3f(0.0F, 0.0F, 0.0F);
-        Quaternionf rotation = new Quaternionf()
-            .rotationZ((float) Math.PI)
-            .rotateY(entity.getYRot() * ((float) Math.PI / 180.0f));
-
-        InventoryScreen.renderEntityInInventory(
-            guiGraphics,
-            x, y,
-            entityScaleFactor,
-            translation,
-            rotation,
-            null,
-            entity
-        );
-
+        canvas.renderEntity(x, y, entityScaleFactor, entity.getYRot(), entity);
       } catch (Exception e) {
         e.printStackTrace();
       }
     }
   }
 
-  public void draw(GuiGraphics guiGraphics, float scale) {
-    draw(guiGraphics, scale, 0, 0);
+  public void draw(HudCanvas canvas, float scale) {
+    draw(canvas, scale, 0, 0);
   }
 
   private void updateScale() {
