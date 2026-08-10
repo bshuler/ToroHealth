@@ -8,13 +8,13 @@ import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.PotionItem;
 //? if >=26.1 {
-// SwordItem is gone entirely in 26.2 (confirmed via javap - no class of that
+/*// SwordItem is gone entirely in 26.2 (confirmed via javap - no class of that
 // name survives anywhere in the jar; swords are now a plain Item carrying
 // components, identified only via the ItemTags.SWORDS tag).
 import net.minecraft.tags.ItemTags;
-//?} else {
-/*import net.minecraft.world.item.SwordItem;
-*///?}
+*///?} else {
+import net.minecraft.world.item.SwordItem;
+//?}
 import net.minecraft.world.item.TridentItem;
 import net.torocraft.torohealth.ToroHealth;
 import net.torocraft.torohealth.config.Config.Mode;
@@ -47,13 +47,13 @@ public class HoldingWeaponUpdater {
   private static boolean isWeapon(ItemStack stack) {
     var item = stack.getItem();
     //? if >=26.1 {
-    // Holder.is(TagKey) (confirmed via javap) is the 26.2 replacement for the
+    /*// Holder.is(TagKey) (confirmed via javap) is the 26.2 replacement for the
     // old ItemStack.is(TagKey)/SwordItem-instanceof checks - ItemStack itself
     // only exposes the generic Predicate<Holder<Item>> overload now.
     boolean isSword = item.builtInRegistryHolder().is(ItemTags.SWORDS);
-    //?} else {
-    /*boolean isSword = item instanceof SwordItem;
-    *///?}
+    *///?} else {
+    boolean isSword = item instanceof SwordItem;
+    //?}
     return isSword
         || item instanceof AxeItem
         || item instanceof TridentItem

@@ -7,12 +7,12 @@ import java.util.List;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
-import net.minecraft.client.renderer.SubmitNodeCollector;
+/*import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-//?} else {
-/*import net.minecraft.client.renderer.MultiBufferSource;
+*///?} else {
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-*///?}
+//?}
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -72,7 +72,7 @@ public class HealthBarRenderer {
   }
 
   //? if >=26.1 {
-  public static void renderInWorld(float partialTick, PoseStack poseStack, Camera camera,
+  /*public static void renderInWorld(float partialTick, PoseStack poseStack, Camera camera,
       SubmitNodeCollector submitNodeCollector) {
     if (renderedEntities.isEmpty()) {
       return;
@@ -108,8 +108,8 @@ public class HealthBarRenderer {
 
     renderedEntities.clear();
   }
-  //?} else {
-  /*public static void renderInWorld(float partialTick, PoseStack poseStack, Camera camera) {
+  *///?} else {
+  public static void renderInWorld(float partialTick, PoseStack poseStack, Camera camera) {
     if (renderedEntities.isEmpty()) {
       return;
     }
@@ -140,7 +140,7 @@ public class HealthBarRenderer {
     bufferSource.endBatch(RenderType.lines());
     renderedEntities.clear();
   }
-  *///?}
+  //?}
 
   private static void renderHealthBar(Matrix4f matrix, VertexConsumer vertexConsumer,
       LivingEntity entity) {

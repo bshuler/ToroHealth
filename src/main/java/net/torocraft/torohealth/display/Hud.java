@@ -7,10 +7,10 @@ import net.minecraft.network.chat.Component;
 /*import net.minecraft.network.chat.TextComponent;
 *///?}
 //? if >=26.1 {
-import net.minecraft.resources.Identifier;
-//?} else {
-/*import net.minecraft.resources.ResourceLocation;
-*///?}
+/*import net.minecraft.resources.Identifier;
+*///?} else {
+import net.minecraft.resources.ResourceLocation;
+//?}
 import net.minecraft.world.entity.LivingEntity;
 import net.torocraft.torohealth.ToroHealth;
 import net.torocraft.torohealth.config.Config;
@@ -21,10 +21,10 @@ import net.torocraft.torohealth.render.PlatformHudCanvas;
 //? if <1.20 {
 /*import com.mojang.blaze3d.vertex.PoseStack;
 *///?} elif >=26.1 {
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-//?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
-*///?}
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
+*///?} else {
+import net.minecraft.client.gui.GuiGraphics;
+//?}
 
 /**
  * The public entry point ({@link #draw(HudCanvas, float, int, int)}'s two
@@ -38,12 +38,12 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  */
 public class Hud extends Screen {
   //? if >=26.1 {
-  private static final Identifier BACKGROUND_TEXTURE =
+  /*private static final Identifier BACKGROUND_TEXTURE =
       Identifier.fromNamespaceAndPath(ToroHealth.MODID, "textures/gui/default_skin_basic.png");
-  //?} elif >=1.21 {
-  /*private static final ResourceLocation BACKGROUND_TEXTURE =
+  *///?} elif >=1.21 {
+  private static final ResourceLocation BACKGROUND_TEXTURE =
       ResourceLocation.fromNamespaceAndPath(ToroHealth.MODID, "textures/gui/default_skin_basic.png");
-  *///?} else {
+  //?} else {
   /*private static final ResourceLocation BACKGROUND_TEXTURE =
       new ResourceLocation(ToroHealth.MODID, "textures/gui/default_skin_basic.png");
   *///?}
@@ -58,15 +58,15 @@ public class Hud extends Screen {
     /*super(new TextComponent("ToroHealth HUD"));
     this.minecraft = Minecraft.getInstance();
     *///?} elif >=26.1 {
-    // Screen.minecraft is `final` in 26.2 (confirmed via javap); the new
+    /*// Screen.minecraft is `final` in 26.2 (confirmed via javap); the new
     // 3-arg Screen(Minecraft, Font, Component) constructor lets a subclass
     // supply it at construction time instead of assigning the field
     // afterward, which no longer compiles against a final field.
     super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("ToroHealth HUD"));
-    //?} else {
-    /*super(Component.literal("ToroHealth HUD"));
+    *///?} else {
+    super(Component.literal("ToroHealth HUD"));
     this.minecraft = Minecraft.getInstance();
-    *///?}
+    //?}
   }
 
   //? if <1.20 {
@@ -74,14 +74,14 @@ public class Hud extends Screen {
     draw(new PlatformHudCanvas(poseStack), partialTick, width, height);
   }
   *///?} elif >=26.1 {
-  public void draw(GuiGraphicsExtractor guiGraphics, float partialTick, int width, int height) {
+  /*public void draw(GuiGraphicsExtractor guiGraphics, float partialTick, int width, int height) {
     draw(new PlatformHudCanvas(guiGraphics), partialTick, width, height);
   }
-  //?} else {
-  /*public void draw(GuiGraphics guiGraphics, float partialTick, int width, int height) {
+  *///?} else {
+  public void draw(GuiGraphics guiGraphics, float partialTick, int width, int height) {
     draw(new PlatformHudCanvas(guiGraphics), partialTick, width, height);
   }
-  *///?}
+  //?}
 
   private void draw(HudCanvas canvas, float partialTick, int width, int height) {
     this.config = ToroHealth.CONFIG;

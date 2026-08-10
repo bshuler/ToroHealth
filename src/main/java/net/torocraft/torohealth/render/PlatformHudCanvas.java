@@ -2,10 +2,10 @@ package net.torocraft.torohealth.render;
 
 import net.minecraft.client.gui.Font;
 //? if >=26.1 {
-import net.minecraft.resources.Identifier;
-//?} else {
-/*import net.minecraft.resources.ResourceLocation;
-*///?}
+/*import net.minecraft.resources.Identifier;
+*///?} else {
+import net.minecraft.resources.ResourceLocation;
+//?}
 import net.minecraft.world.entity.LivingEntity;
 
 //? if <1.19 {
@@ -20,16 +20,16 @@ import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import org.joml.Quaternionf;
 *///?} elif >=26.1 {
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.RenderPipelines;
-//?} elif >=1.21 {
-/*import net.minecraft.client.gui.GuiGraphics;
+*///?} elif >=1.21 {
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.RenderType;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-*///?} else {
+//?} else {
 /*import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import org.joml.Quaternionf;
@@ -87,18 +87,18 @@ public class PlatformHudCanvas implements HudCanvas {
     this.pose = pose;
   }
   *///?} elif >=26.1 {
-  private final GuiGraphicsExtractor context;
+  /*private final GuiGraphicsExtractor context;
 
   public PlatformHudCanvas(GuiGraphicsExtractor context) {
     this.context = context;
   }
-  //?} else {
-  /*private final GuiGraphics context;
+  *///?} else {
+  private final GuiGraphics context;
 
   public PlatformHudCanvas(GuiGraphics context) {
     this.context = context;
   }
-  *///?}
+  //?}
 
   @Override
   public void fill(int x1, int y1, int x2, int y2, int color) {
@@ -118,10 +118,10 @@ public class PlatformHudCanvas implements HudCanvas {
       font.draw(pose, text, x, y, color);
     }
     *///?} elif >=26.1 {
-    context.text(font, text, x, y, color, dropShadow);
-    //?} else {
-    /*context.drawString(font, text, x, y, color, dropShadow);
-    *///?}
+    /*context.text(font, text, x, y, color, dropShadow);
+    *///?} else {
+    context.drawString(font, text, x, y, color, dropShadow);
+    //?}
   }
 
   @Override
@@ -129,15 +129,15 @@ public class PlatformHudCanvas implements HudCanvas {
     //? if <1.20 {
     /*pose.pushPose();
     *///?} elif >=26.1 {
-    // Matrix3x2fStack (26.2's replacement for PoseStack in the GUI pipeline)
+    /*// Matrix3x2fStack (26.2's replacement for PoseStack in the GUI pipeline)
     // uses pushMatrix()/popMatrix() naming instead of pushPose()/popPose(),
     // confirmed via javap and mirrored from the sibling mod FlightHud's
     // PlatformCanvas, which already proves this exact shape against a real
     // 26.1+ build.
     context.pose().pushMatrix();
-    //?} else {
-    /*context.pose().pushPose();
-    *///?}
+    *///?} else {
+    context.pose().pushPose();
+    //?}
   }
 
   @Override
@@ -145,10 +145,10 @@ public class PlatformHudCanvas implements HudCanvas {
     //? if <1.20 {
     /*pose.popPose();
     *///?} elif >=26.1 {
-    context.pose().popMatrix();
-    //?} else {
-    /*context.pose().popPose();
-    *///?}
+    /*context.pose().popMatrix();
+    *///?} else {
+    context.pose().popPose();
+    //?}
   }
 
   @Override
@@ -156,13 +156,13 @@ public class PlatformHudCanvas implements HudCanvas {
     //? if <1.20 {
     /*pose.translate(x, y, z);
     *///?} elif >=26.1 {
-    // Matrix3x2fStack is a 2D affine matrix - translate(x, y) has no z
+    /*// Matrix3x2fStack is a 2D affine matrix - translate(x, y) has no z
     // parameter. Every HudCanvas call site in this project passes z=0.0f
     // for GUI drawing, so dropping it here is safe.
     context.pose().translate(x, y);
-    //?} else {
-    /*context.pose().translate(x, y, z);
-    *///?}
+    *///?} else {
+    context.pose().translate(x, y, z);
+    //?}
   }
 
   @Override
@@ -170,10 +170,10 @@ public class PlatformHudCanvas implements HudCanvas {
     //? if <1.20 {
     /*pose.scale(x, y, z);
     *///?} elif >=26.1 {
-    context.pose().scale(x, y);
-    //?} else {
-    /*context.pose().scale(x, y, z);
-    *///?}
+    /*context.pose().scale(x, y);
+    *///?} else {
+    context.pose().scale(x, y, z);
+    //?}
   }
 
   //? if <1.20 {
@@ -187,7 +187,7 @@ public class PlatformHudCanvas implements HudCanvas {
     GuiComponent.blit(pose, x, y, u, v, width, height, texWidth, texHeight);
   }
   *///?} elif >=26.1 {
-  @Override
+  /*@Override
   public void blitBackground(Identifier texture, int x, int y, float u, float v, int width,
       int height, int texWidth, int texHeight) {
     // RenderType::guiTextured (the old blit's pipeline-supplier argument)
@@ -196,14 +196,14 @@ public class PlatformHudCanvas implements HudCanvas {
     context.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, texWidth,
         texHeight);
   }
-  //?} elif >=1.21 {
-  /*@Override
+  *///?} elif >=1.21 {
+  @Override
   public void blitBackground(ResourceLocation texture, int x, int y, float u, float v, int width,
       int height, int texWidth, int texHeight) {
     context.blit(RenderType::guiTextured, texture, x, y, u, v, width, height, texWidth,
         texHeight);
   }
-  *///?} else {
+  //?} else {
   /*@Override
   public void blitBackground(ResourceLocation texture, int x, int y, float u, float v, int width,
       int height, int texWidth, int texHeight) {
@@ -228,7 +228,7 @@ public class PlatformHudCanvas implements HudCanvas {
     InventoryScreen.renderEntityInInventory(pose, (int) x, (int) y, (int) scale, rotation,
         new Quaternionf(), entity);
     *///?} elif >=26.1 {
-    // InventoryScreen.renderEntityInInventory is gone entirely in 26.2; the
+    /*// InventoryScreen.renderEntityInInventory is gone entirely in 26.2; the
     // only survivor is extractEntityInInventoryFollowsMouse(
     //   GuiGraphicsExtractor, int x1, int y1, int x2, int y2, int scale,
     //   float mouseX, float mouseY, float partialTick, LivingEntity)
@@ -248,13 +248,13 @@ public class PlatformHudCanvas implements HudCanvas {
     int iScale = (int) scale;
     InventoryScreen.extractEntityInInventoryFollowsMouse(context, ix, iy, ix + iScale,
         iy + iScale, iScale, 0.0f, 0.0f, 0.0f, entity);
-    //?} elif >=1.21 {
-    /*Quaternionf rotation = new Quaternionf()
+    *///?} elif >=1.21 {
+    Quaternionf rotation = new Quaternionf()
         .rotationZ((float) Math.PI)
         .rotateY(yRotDegrees * ((float) Math.PI / 180.0f));
     InventoryScreen.renderEntityInInventory(context, x, y, scale,
         new Vector3f(0.0F, 0.0F, 0.0F), rotation, null, entity);
-    *///?} else {
+    //?} else {
     /*Quaternionf rotation = new Quaternionf()
         .rotationZ((float) Math.PI)
         .rotateY(yRotDegrees * ((float) Math.PI / 180.0f));

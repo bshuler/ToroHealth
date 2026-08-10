@@ -4,10 +4,10 @@ package net.torocraft.torohealth.client;
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiComponent;
 *///?} elif >=26.1 {
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-//?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
-*///?}
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
+*///?} else {
+import net.minecraft.client.gui.GuiGraphics;
+//?}
 //? if <1.19 {
 /*import net.minecraft.network.chat.TextComponent;
 *///?}
@@ -58,10 +58,10 @@ public class ConfigScreen extends Screen {
             return;
         }
         //? if >=26.1 {
-        this.minecraft.setScreenAndShow(this.parent);
-        //?} else {
-        /*this.minecraft.setScreen(this.parent);
-        *///?}
+        /*this.minecraft.setScreenAndShow(this.parent);
+        *///?} else {
+        this.minecraft.setScreen(this.parent);
+        //?}
     }
 
     // Component.literal(String) is a >=1.19-era static factory; 1.18.2 only
@@ -310,7 +310,7 @@ public class ConfigScreen extends Screen {
         GuiComponent.drawString(poseStack, this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
     }
     *///?} elif >=26.1 {
-    // Screen.render(GuiGraphics, ...) was renamed/restructured into
+    /*// Screen.render(GuiGraphics, ...) was renamed/restructured into
     // extractRenderState(GuiGraphicsExtractor, ...) in 26.2 (confirmed via
     // javap - no render(GuiGraphics,...) survivor on Screen at all), matching
     // the same GuiGraphics->GuiGraphicsExtractor + drawString->text rename
@@ -333,8 +333,8 @@ public class ConfigScreen extends Screen {
 
         guiGraphics.text(this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
     }
-    //?} else {
-    /*public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    *///?} else {
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         int col1 = this.width / 6;
@@ -351,7 +351,7 @@ public class ConfigScreen extends Screen {
 
         guiGraphics.drawString(this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
     }
-    *///?}
+    //?}
 
     @Override
     public void onClose() {

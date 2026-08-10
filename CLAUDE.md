@@ -197,6 +197,56 @@ what actually compiled; when in doubt, extract the real loader jar for that
 exact MC version and run `javap -p` against it rather than trusting this
 table or extrapolating from a neighboring version.
 
+### Testing & coverage (JaCoCo)
+
+JUnit 5 + JaCoCo are wired into `build.gradle.kts`, mirroring the canonical
+pattern from the sibling `critical-orientation`/`FlightHud`/
+`critical-flight-details`/`EasierVillagerTrading`/`simple-utilities-mod`
+repos (including the NeoForge `junit-fml`/`mainargs.txt` classpath-exclusion
+guard, gated `if (mod.isNeoforge)`, and the Forge
+`compileTestJava`-depends-on-`generatePackMCMetaJson` fix). Tests run
+against whichever Stonecutter node is currently `active` (`1.21.4-fabric`
+as of this writing — matches `vcsVersion`) — **never** across the full
+matrix, and never by hand-toggling `//? if` markers to reach another node's
+code.
+
+```bash
+./gradlew test                             # active-project tests only
+./gradlew jacocoTestReport                 # HTML+XML report, active project
+./gradlew check                            # test + 100% coverage gate
+./gradlew "Set active project to <mc>-<loader>"   # switch node before re-testing another cell
+```
+
+`tasks.check` depends on `jacocoTestCoverageVerification`, which enforces
+`LINE COVEREDRATIO 1.00` (100%) over the classes below. This is a real,
+enforced gate, not aspirational — `./gradlew check` fails the build if
+coverage regresses. Confirmed: `178`/`178` lines covered (`1.00` ratio) on
+`1.21.4-fabric` at the time this was landed.
+
+**Coverage scope** (see `PLAN.md` "Phase 2: Test coverage" for the full
+class-by-class breakdown, refactors, and the real bugs this pass found):
+
+| In scope (tested to 100%) | Excluded (documented reason in `PLAN.md`) |
+|---|---|
+| `config.Config` (+ nested `Hud`/`Particle`/`Bar`/`InWorld`, enums `Mode`/`NumberType`/`AnchorPoint`) | `ToroHealth`, `ClientEventHandler` — loader entrypoints, live singletons |
+| `config.loader.Defaulter` | `bars.BarState`, `bars.BarStates`, `bars.BarParticle`, `bars.HealthBarRenderer`, `bars.ParticleRenderer` — touch a live `LivingEntity`/`Minecraft`/rendering primitive |
+| `config.loader.ColorJsonAdapter` | `client.ConfigScreen` — vanilla `Screen` subclass |
+| `config.loader.ConfigLoader` | `display/**`, `render/**` — render straight to `HudCanvas`/live rendering primitives |
+| `config.loader.FileWatcher` | `util.RayTrace`, `util.HoldingWeaponUpdater`, `util.EntityUtil` — call `Minecraft.getInstance()`/live entity types directly |
+| `bars.BarStateMath` | |
+
+`bars.BarStateMath` is the extracted pure health/damage-delta state machine
+that used to live inline inside `bars.BarState` (which still exists as a
+thin wrapper doing the one side effect `BarStateMath` deliberately excludes
+— reading the live particle-enabled config flag and constructing a
+`BarParticle` against the live entity). `ConfigLoader` and `FileWatcher` are
+pure enough to unit test headless specifically because they take a plain
+`java.io.File` and don't touch any loader singleton themselves — that
+resolution lives at the `ToroHealth.java` call site instead (excluded, per
+above). `FileWatcher`'s full `run()` lifecycle is exercised against a
+**real** `WatchService`/filesystem write in addition to hand-rolled fakes
+for the pure `pollEvents()` branch logic.
+
 ## Version matrix (target)
 
 Newest stable Minecraft per `https://meta.fabricmc.net/v2/versions/game`

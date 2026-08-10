@@ -8,19 +8,19 @@ import net.torocraft.torohealth.bars.ParticleRenderer;
 import net.torocraft.torohealth.util.HoldingWeaponUpdater;
 
 //? if fabric && >=26.1 {
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+/*import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-//?} elif fabric {
-/*import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+*///?} elif fabric {
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-*///?} elif neoforge && >=26.1 {
+//?} elif neoforge && >=26.1 {
 /*import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -90,7 +90,7 @@ import net.minecraftforge.fml.common.Mod;
 public class ClientEventHandler {
 
   //? if fabric && >=26.1 {
-  // 26.2's Fabric API replaced HudRenderCallback/WorldRenderEvents.
+  /*// 26.2's Fabric API replaced HudRenderCallback/WorldRenderEvents.
   // AFTER_TRANSLUCENT with HudElementRegistry (HudElement.extractRenderState
   // takes GuiGraphicsExtractor+DeltaTracker, matching Hud's own >=26.1
   // draw(...) overload) and LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES
@@ -125,20 +125,20 @@ public class ClientEventHandler {
   private static void onClientTick(Minecraft client) {
     clientTick(client);
   }
-  //?} elif fabric {
-  /*public static void register() {
+  *///?} elif fabric {
+  public static void register() {
     HudRenderCallback.EVENT.register(ClientEventHandler::onHudRender);
     WorldRenderEvents.AFTER_TRANSLUCENT.register(ClientEventHandler::onWorldRenderAfterTranslucent);
     ClientTickEvents.END_CLIENT_TICK.register(ClientEventHandler::onClientTick);
   }
 
   //? if <1.20 {
-  /^private static void onHudRender(PoseStack poseStack, float tickDelta) {
+  /*private static void onHudRender(PoseStack poseStack, float tickDelta) {
     Minecraft client = Minecraft.getInstance();
     ToroHealth.HUD.draw(poseStack, tickDelta,
         client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
   }
-  ^///?} elif >=1.21.2 {
+  *///?} elif >=1.21.2 {
   private static void onHudRender(net.minecraft.client.gui.GuiGraphics guiGraphics,
       net.minecraft.client.DeltaTracker deltaTracker) {
     Minecraft client = Minecraft.getInstance();
@@ -146,28 +146,28 @@ public class ClientEventHandler {
         client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
   }
   //?} else {
-  /^private static void onHudRender(net.minecraft.client.gui.GuiGraphics guiGraphics,
+  /*private static void onHudRender(net.minecraft.client.gui.GuiGraphics guiGraphics,
       float tickDelta) {
     Minecraft client = Minecraft.getInstance();
     ToroHealth.HUD.draw(guiGraphics, tickDelta,
         client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
   }
-  ^///?}
+  *///?}
 
   private static void onWorldRenderAfterTranslucent(WorldRenderContext context) {
     //? if >=1.21.2 {
     HealthBarRenderer.renderInWorld(context.tickCounter().getGameTimeDeltaPartialTick(false),
         context.matrixStack(), context.camera());
     //?} else {
-    /^HealthBarRenderer.renderInWorld(context.tickDelta(), context.matrixStack(), context.camera());
-    ^///?}
+    /*HealthBarRenderer.renderInWorld(context.tickDelta(), context.matrixStack(), context.camera());
+    *///?}
     ParticleRenderer.renderParticles(context.matrixStack(), context.camera());
   }
 
   private static void onClientTick(Minecraft client) {
     clientTick(client);
   }
-  *///?} elif neoforge && >=26.1 {
+  //?} elif neoforge && >=26.1 {
   /*// RenderLevelStageEvent was restructured in 26.2 (confirmed via javap
   // against the real neoforge-26.2.0.58 jar): it dropped its Stage enum +
   // getStage() entirely in favor of one concrete subclass per stage, and -

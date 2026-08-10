@@ -2,10 +2,10 @@ package net.torocraft.torohealth.render;
 
 import net.minecraft.client.gui.Font;
 //? if >=26.1 {
-import net.minecraft.resources.Identifier;
-//?} else {
-/*import net.minecraft.resources.ResourceLocation;
-*///?}
+/*import net.minecraft.resources.Identifier;
+*///?} else {
+import net.minecraft.resources.ResourceLocation;
+//?}
 import net.minecraft.world.entity.LivingEntity;
 
 /**
@@ -42,12 +42,12 @@ public interface HudCanvas {
    * {@link PlatformHudCanvas} for how each era resolves that.
    */
   //? if >=26.1 {
-  void blitBackground(Identifier texture, int x, int y, float u, float v, int width,
+  /*void blitBackground(Identifier texture, int x, int y, float u, float v, int width,
       int height, int texWidth, int texHeight);
-  //?} else {
-  /*void blitBackground(ResourceLocation texture, int x, int y, float u, float v, int width,
+  *///?} else {
+  void blitBackground(ResourceLocation texture, int x, int y, float u, float v, int width,
       int height, int texWidth, int texHeight);
-  *///?}
+  //?}
 
   /**
    * Renders {@code entity} as an inventory-style icon centered at

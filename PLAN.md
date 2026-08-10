@@ -194,6 +194,119 @@ still exposes `WorldRenderEvents`/`ClientTickEvents`/`HudRenderCallback`
 (it does, per Fabric API's changelog history — Fabric's core client
 lifecycle/rendering events have been stable since well before 1.18).
 
+## Phase 2: Test coverage
+
+Bert's directive: 100% test coverage, enforced (not aspirational). JUnit 5 +
+JaCoCo wired into `build.gradle.kts` mirroring the canonical pattern from
+`critical-orientation`/`FlightHud`/`critical-flight-details`/
+`EasierVillagerTrading`/`simple-utilities-mod`: `jacoco` plugin,
+`tasks.test { useJUnitPlatform(); finalizedBy(jacocoTestReport) }`, a shared
+`jacocoExcludes` glob list applied to both `jacocoTestReport` and
+`jacocoTestCoverageVerification`'s `classDirectories`, a `LINE
+COVEREDRATIO 1.00` violation rule, `tasks.check { dependsOn(...) }`, the
+NeoForge `junit-fml` classpath exclusion (`if (mod.isNeoforge)`), and the
+Forge `compileTestJava dependsOn generatePackMCMetaJson` fix. All work done
+against the single active Stonecutter node (`1.21.4-fabric`, matching
+`vcsVersion`) — never across the matrix, never by hand-toggling `//? if`
+markers.
+
+**Result: 100% LINE coverage on the included scope — 178/178 lines, ratio
+1.00, `./gradlew :1.21.4-fabric:check` green.**
+
+### Coverage table
+
+| Class | Lines | Why testable |
+|---|---|---|
+| `config.Config` (+ nested `Hud`/`Particle`/`Bar`/`InWorld`, enums) | 43 | Plain POJO + enums, zero `net.minecraft` imports |
+| `config.loader.Defaulter` | 16 | Pure reflection helper, zero MC imports |
+| `config.loader.ColorJsonAdapter` | 12 | Pure Gson `TypeAdapter<Integer>`, no MC types |
+| `config.loader.ConfigLoader` | 34 | Takes a plain `java.io.File`; loader-specific config-dir resolution lives at the `ToroHealth.java` call site instead |
+| `config.loader.FileWatcher` | 33 | Wraps `java.nio.file.WatchService` only; no MC/loader types |
+| `bars.BarStateMath` | 40 | Extracted pure health/damage-delta state machine (see below) |
+| **Total** | **178** | **178/178 covered — 1.00 ratio** |
+
+### Exclusion table (honest, per class)
+
+| Class | Reason excluded |
+|---|---|
+| `ToroHealth`, `ClientEventHandler` | Loader entrypoints — construct/register against live `Minecraft`/event-bus singletons at class-load time |
+| `bars.BarState` | Thin wrapper over `BarStateMath` that reads a live `LivingEntity` and the live particle-enabled config flag, and constructs a `BarParticle` against the live entity/camera |
+| `bars.BarStates`, `bars.BarParticle`, `bars.HealthBarRenderer`, `bars.ParticleRenderer` | Hold/render against live entities and `GuiGraphics`/`PoseStack` rendering primitives |
+| `client.ConfigScreen` | Vanilla `Screen` subclass — needs a running game client to construct/render |
+| `display/**`, `render/**` | Render straight to `HudCanvas`/`GuiGraphics`/`PoseStack` |
+| `util.RayTrace` | Calls `Minecraft.getInstance()`, raytraces against a live `Level` |
+| `util.HoldingWeaponUpdater` | Calls `Minecraft.getInstance()`, reads the live player's held `ItemStack`s |
+| `util.EntityUtil` | Takes a live `Entity`/`Minecraft` and calls `entity.isInvisibleTo(player)` etc. — real per-instance entity state, not headless-safe |
+
+None of the excluded classes have any extractable pure logic left inside
+them beyond what's already been pulled into `BarStateMath` — each one's
+entire body is either a loader/event-bus registration call or a direct
+read of live entity/rendering state.
+
+### `BarStateMath` extraction
+
+`bars.BarState`'s `tick()`/`reset()`/`incrementTimers()`/
+`handleHealthChange()`/`updateAnimations()` methods were pure numeric state
+machine logic (health/damage deltas, decay-and-snap animation timing) with
+no `net.minecraft` dependency of their own — only the one side effect
+(constructing a `BarParticle`, which needs the live entity) tied `BarState`
+to Minecraft types. Extracted that logic verbatim into a new
+`bars.BarStateMath` class (`tick(float health)` returns whether the health
+changed, exposes the same public fields `previousHealth`,
+`previousHealthDisplay`, `previousHealthDelay`, `lastDmg`,
+`lastDmgCumulative`, `lastHealth`, `lastDmgDelay`); `BarState` now holds a
+`BarStateMath math` field, delegates `tick()` to it, and only performs the
+particle side effect when `math.tick(...)` reports a change. Same pattern as
+`FlightComputerMath`/`GameInfoMath` in the sibling mods.
+
+**Gotcha for whoever writes float-arithmetic tests next**: a health/damage
+decay test written by hand-computing expected values in double precision
+(or in a Python re-implementation) can be *wrong* against the real `float`
+arithmetic the algorithm actually runs in — repeated `float` subtraction
+(here, `previousHealthDisplay -= animationSpeed` where `animationSpeed` is a
+`float` `0.8f`) accumulates rounding error that can shift which branch fires
+by one extra tick versus a double-precision prediction. Caught this while
+writing `BarStateMathTest.tick_previousHealthSnapsToCurrentHealthOnceDisplayCatchesUp`:
+a double-precision simulation predicted the decay-to-snap transition
+happened after 18 same-health ticks landing exactly on `12.0f`; the real
+compiled class actually lands on `12.000003f` (still fractionally *above*
+12) after 18 ticks, decays once more to `11.200003f` on the 19th, and only
+snaps on the 20th. Verified by compiling and running the actual
+`BarStateMath.java` standalone in a scratch directory with a small
+reflection-based diagnostic driver (`javac`+`java`, not a re-implementation)
+before writing the final assertions. **Always ground-truth `float`-based
+algorithm tests against the real compiled class, not a hand or
+cross-language re-implementation.**
+
+### Real bug found and fixed: `ColorJsonAdapter` alpha masking
+
+`ColorJsonAdapter.read()` returned `Color.decode(read).getRGB()` directly.
+`Color.getRGB()` always sets the high byte to a fully-opaque alpha
+(`0xff000000`), but `write()` only ever serializes the low 24 RGB bits with
+no alpha component. So `read(write(x))` did not round-trip to `x` — it
+returned `x | 0xff000000`, silently changing every stored color int's high
+byte the first time a config was written then re-read. Fixed by masking:
+`return c.getRGB() & 0xffffff;`. Found and fixed while writing
+`ColorJsonAdapterTest`; a round-trip test (`write` then `read`, asserting
+equality) is what caught it.
+
+### Dead-code observation (not fixed — out of scope, recorded honestly)
+
+`Config.InWorld` declares six color fields — `damageColor`, `healColor`,
+`friendColor`, `friendColorSecondary`, `foeColor`, `foeColorSecondary` —
+that are set from JSON/defaults but never read anywhere outside
+`Config.java` itself (confirmed via a repo-wide grep). They appear to be
+config surface for a feature (in-world colored health indicators by
+friend/foe) that was never wired into any renderer. Left as-is: fixing dead
+config wiring is a feature decision, not a test-coverage or bug-fix task,
+and touching `Config`'s field set risks a JSON schema change for existing
+installs. Recorded here so whoever picks up feature work on `InWorld` mode
+next knows these fields already exist and are already parsed.
+
+### Folia compatibility
+
+Folia n/a — client mod.
+
 ## Milestones (commit log, updated as work lands)
 
 1. ✅ `CLAUDE.md` + `PLAN.md` written and committed.
@@ -214,7 +327,14 @@ lifecycle/rendering events have been stable since well before 1.18).
 12. ✅ 26.2-neoforge green build (jar-verified, 42 classes).
 13. ✅ Forgix re-verified for this repo; decision recorded (ship per-loader
     jars — see "Single merged jar (Forgix)" above).
-14. ✅ Final report delivered.
+14. ✅ Final report delivered (Phase 1).
+15. ✅ Phase 2 test infrastructure landed (JUnit 5 + JaCoCo wired into
+    `build.gradle.kts`) with a first meaningful test passing.
+16. ✅ Phase 2 coverage driven to the enforced `LINE COVEREDRATIO 1.00` bar
+    (178/178 lines) with exclusions documented above; real
+    `ColorJsonAdapter` alpha-masking bug found and fixed along the way.
+17. ✅ Folia verdict recorded (n/a — client mod); per-repo extras (GOTCHAs
+    aa/bb/cc) applied — see "Phase 2: Test coverage" above.
 
 ## Parked commits — RESOLVED, landed and pushed
 

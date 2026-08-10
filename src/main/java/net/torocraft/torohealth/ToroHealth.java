@@ -4,10 +4,10 @@ import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.util.Random;
 //? if >=26.1 {
-import net.minecraft.resources.Identifier;
-//?} else {
-/*import net.minecraft.resources.ResourceLocation;
-*///?}
+/*import net.minecraft.resources.Identifier;
+*///?} else {
+import net.minecraft.resources.ResourceLocation;
+//?}
 import net.torocraft.torohealth.config.Config;
 import net.torocraft.torohealth.config.loader.ConfigLoader;
 import net.torocraft.torohealth.display.Hud;
@@ -15,12 +15,12 @@ import net.torocraft.torohealth.util.RayTrace;
 import org.slf4j.Logger;
 
 //? if fabric && >=26.1 {
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.loader.api.FabricLoader;
-//?} elif fabric {
 /*import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-*///?} elif neoforge && >=26.1 {
+*///?} elif fabric {
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
+//?} elif neoforge && >=26.1 {
 /*import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLPaths;
@@ -57,7 +57,7 @@ import net.minecraftforge.fml.loading.FMLPaths;
  * project's flat-chain-only rule.
  */
 //? if fabric && >=26.1 {
-public class ToroHealth implements ClientModInitializer {
+/*public class ToroHealth implements ClientModInitializer {
 
   public static final String MODID = "torohealth";
   public static final Logger LOGGER = LogUtils.getLogger();
@@ -93,8 +93,8 @@ public class ToroHealth implements ClientModInitializer {
     ClientEventHandler.register();
   }
 }
-//?} elif fabric {
-/*public class ToroHealth implements ClientModInitializer {
+*///?} elif fabric {
+public class ToroHealth implements ClientModInitializer {
 
   public static final String MODID = "torohealth";
   public static final Logger LOGGER = LogUtils.getLogger();
@@ -112,8 +112,8 @@ public class ToroHealth implements ClientModInitializer {
     //? if >=1.21 {
     return ResourceLocation.fromNamespaceAndPath(MODID, path);
     //?} else {
-    /^return new ResourceLocation(MODID, path);
-    ^///?}
+    /*return new ResourceLocation(MODID, path);
+    *///?}
   }
 
   public static void saveConfig() {
@@ -134,7 +134,7 @@ public class ToroHealth implements ClientModInitializer {
     ClientEventHandler.register();
   }
 }
-*///?} elif neoforge && >=26.1 {
+//?} elif neoforge && >=26.1 {
 /*@Mod(ToroHealth.MODID)
 public class ToroHealth {
 

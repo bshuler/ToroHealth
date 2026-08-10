@@ -72,7 +72,27 @@ public class ConfigLoader<T extends IConfig> {
     if (watcher != null) {
       return;
     }
-    watcher = FileWatcher.watch(file, () -> load());
+    watcher = FileWatcher.watch(file, this::reload);
+  }
+
+  /**
+   * The callback wired up to the {@link FileWatcher} started by
+   * {@link #watch(File)}. Pulled out of that call site as a named,
+   * package-private method (rather than an inline lambda) specifically so a
+   * test can invoke the exact same reload path {@code watch()} wires up,
+   * without waiting on a real filesystem-change event to fire it.
+   */
+  void reload() {
+    load();
+  }
+
+  /**
+   * Package-private test seam: lets tests observe that {@link #watch(File)}
+   * is idempotent (a second call doesn't replace or duplicate the watcher)
+   * without depending on real filesystem-event delivery timing.
+   */
+  boolean isWatching() {
+    return watcher != null;
   }
 
 }
