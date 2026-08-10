@@ -35,10 +35,8 @@ stonecutter {
         // split). Quilt is not a separate cell - it runs Fabric jars natively.
 
         // Newest stable Minecraft per https://meta.fabricmc.net/v2/versions/game
-        // (checked live - do not trust training-data memory) is 26.2. Kept
-        // commented pending a dedicated toolchain-support pass - see PLAN.md
-        // "26.2" section for the live-verified blocker.
-        // mc("26.2", "fabric", "neoforge")
+        // (checked live - do not trust training-data memory) is 26.2.
+        mc("26.2", "fabric", "neoforge")
 
         // 1.21.4 - Fabric + NeoForge (last classic-numbered Yarn-mapped target)
         mc("1.21.4", "fabric", "neoforge")

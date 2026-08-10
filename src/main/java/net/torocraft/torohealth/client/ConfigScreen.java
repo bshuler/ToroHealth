@@ -1,6 +1,16 @@
 package net.torocraft.torohealth.client;
 
-import net.minecraft.client.gui.GuiGraphics;
+//? if <1.20 {
+/*import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.gui.GuiComponent;
+*///?} elif >=26.1 {
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+//?} else {
+/*import net.minecraft.client.gui.GuiGraphics;
+*///?}
+//? if <1.19 {
+/*import net.minecraft.network.chat.TextComponent;
+*///?}
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.EditBox;
@@ -35,9 +45,66 @@ public class ConfigScreen extends Screen {
     private Button anchorPointButton;
 
     public ConfigScreen(Screen parent) {
-        super(Component.literal("ToroHealth Configuration"));
+        super(text("ToroHealth Configuration"));
         this.parent = parent;
         this.config = ToroHealth.CONFIG;
+    }
+
+    // Minecraft.setScreen(Screen) was replaced by setScreenAndShow(Screen) in
+    // 26.2 (confirmed via javap - no setScreen(Screen) survivor at all);
+    // pulled into one helper since this mod calls it from three places.
+    private void returnToParent() {
+        if (this.minecraft == null) {
+            return;
+        }
+        //? if >=26.1 {
+        this.minecraft.setScreenAndShow(this.parent);
+        //?} else {
+        /*this.minecraft.setScreen(this.parent);
+        *///?}
+    }
+
+    // Component.literal(String) is a >=1.19-era static factory; 1.18.2 only
+    // has TextComponent's public constructor (removed in favor of the
+    // factory method above starting 1.19).
+    private static Component text(String s) {
+        //? if <1.19 {
+        /*return new TextComponent(s);
+        *///?} else {
+        return Component.literal(s);
+        //?}
+    }
+
+    // Checkbox.builder(Component, Font) is a >=1.20.2-era API and its
+    // resulting Checkbox supports setPosition(int, int) same as the old
+    // direct constructor's instance does on 1.19.4/1.20.1. 1.18.2's Checkbox
+    // predates setPosition entirely, so position must go straight into the
+    // constructor there instead - hence this takes x/y up front rather than
+    // leaving callers to setPosition afterward.
+    private Checkbox makeCheckbox(int x, int y, Component message, boolean selected) {
+        //? if >=1.20.2 {
+        Checkbox checkbox = Checkbox.builder(message, this.font).selected(selected).build();
+        checkbox.setPosition(x, y);
+        return checkbox;
+        //?} elif >=1.19 {
+        /*Checkbox checkbox = new Checkbox(0, 0, 20, 20, message, selected);
+        checkbox.setPosition(x, y);
+        return checkbox;
+        *///?} else {
+        /*return new Checkbox(x, y, 20, 20, message, selected);
+        *///?}
+    }
+
+    // Button.builder(Component, OnPress) is a >=1.19-era static factory;
+    // 1.18.2 only has Button's direct constructor (x, y, width, height,
+    // message, onPress) - Button.OnPress is the same functional interface
+    // either way, so every call-site lambda below works unchanged.
+    private Button button(Component message, int x, int y, int w, int h, Button.OnPress onPress) {
+        //? if <1.19 {
+        /*return new Button(x, y, w, h, message, onPress);
+        *///?} else {
+        return Button.builder(message, onPress).bounds(x, y, w, h).build();
+        //?}
     }
 
     @Override
@@ -49,151 +116,127 @@ public class ConfigScreen extends Screen {
         int spacing = 18;
         int sectionSpacing = 10;
 
-        this.addRenderableWidget(Button.builder(Component.literal("HUD Settings"),
-            button -> {}).bounds(col1 - 40, topRow - 12, 80, 12).build()).active = false;
+        this.addRenderableWidget(
+            button(text("HUD Settings"), col1 - 40, topRow - 12, 80, 12, button -> {})).active = false;
 
-        hudDistanceBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, Component.literal("HUD Distance"));
+        hudDistanceBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, text("HUD Distance"));
         hudDistanceBox.setValue(String.valueOf(config.hud.distance));
         this.addRenderableWidget(hudDistanceBox);
 
         topRow += spacing;
-        hudXBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, Component.literal("HUD X Position"));
+        hudXBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, text("HUD X Position"));
         hudXBox.setValue(String.valueOf(config.hud.x));
         this.addRenderableWidget(hudXBox);
 
         topRow += spacing;
-        hudYBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, Component.literal("HUD Y Position"));
+        hudYBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, text("HUD Y Position"));
         hudYBox.setValue(String.valueOf(config.hud.y));
         this.addRenderableWidget(hudYBox);
 
         topRow += spacing;
-        hudScaleBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, Component.literal("HUD Scale"));
+        hudScaleBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, text("HUD Scale"));
         hudScaleBox.setValue(String.valueOf(config.hud.scale));
         this.addRenderableWidget(hudScaleBox);
 
         topRow += spacing;
-        hudHideDelayBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, Component.literal("Hide Delay"));
+        hudHideDelayBox = new EditBox(this.font, col1 - 20, topRow, 40, 16, text("Hide Delay"));
         hudHideDelayBox.setValue(String.valueOf(config.hud.hideDelay));
         this.addRenderableWidget(hudHideDelayBox);
 
         topRow += spacing;
-        anchorPointButton = this.addRenderableWidget(Button.builder(
-            Component.literal("Anchor: " + config.hud.anchorPoint.name()),
+        anchorPointButton = this.addRenderableWidget(button(
+            text("Anchor: " + config.hud.anchorPoint.name()), col1 - 40, topRow, 80, 18,
             button -> {
                 Config.AnchorPoint[] values = Config.AnchorPoint.values();
                 int currentIndex = config.hud.anchorPoint.ordinal();
                 int nextIndex = (currentIndex + 1) % values.length;
                 config.hud.anchorPoint = values[nextIndex];
-                button.setMessage(Component.literal("Anchor: " + config.hud.anchorPoint.name()));
+                button.setMessage(text("Anchor: " + config.hud.anchorPoint.name()));
             }
-        ).bounds(col1 - 40, topRow, 80, 18).build());
+        ));
 
         int col2Row = 25;
-        this.addRenderableWidget(Button.builder(Component.literal("HUD Options"),
-            button -> {}).bounds(col2 - 40, col2Row - 12, 80, 12).build()).active = false;
+        this.addRenderableWidget(
+            button(text("HUD Options"), col2 - 40, col2Row - 12, 80, 12, button -> {})).active = false;
 
         showEntityCheckbox = this.addRenderableWidget(
-            Checkbox.builder(Component.literal("Show Entity"), this.font)
-                .selected(config.hud.showEntity)
-                .build());
-        showEntityCheckbox.setPosition(col2 - 40, col2Row);
+            makeCheckbox(col2 - 40, col2Row, text("Show Entity"), config.hud.showEntity));
 
         col2Row += spacing;
         showBarCheckbox = this.addRenderableWidget(
-            Checkbox.builder(Component.literal("Show Health Bar"), this.font)
-                .selected(config.hud.showBar)
-                .build());
-        showBarCheckbox.setPosition(col2 - 40, col2Row);
+            makeCheckbox(col2 - 40, col2Row, text("Show Health Bar"), config.hud.showBar));
 
         col2Row += spacing;
         showSkinCheckbox = this.addRenderableWidget(
-            Checkbox.builder(Component.literal("Show Skin"), this.font)
-                .selected(config.hud.showSkin)
-                .build());
-        showSkinCheckbox.setPosition(col2 - 40, col2Row);
+            makeCheckbox(col2 - 40, col2Row, text("Show Skin"), config.hud.showSkin));
 
         col2Row += spacing;
         onlyWhenHurtCheckbox = this.addRenderableWidget(
-            Checkbox.builder(Component.literal("Only When Hurt"), this.font)
-                .selected(config.hud.onlyWhenHurt)
-                .build());
-        onlyWhenHurtCheckbox.setPosition(col2 - 40, col2Row);
+            makeCheckbox(col2 - 40, col2Row, text("Only When Hurt"), config.hud.onlyWhenHurt));
 
         col2Row += spacing + sectionSpacing;
-        this.addRenderableWidget(Button.builder(Component.literal("Particles"),
-            button -> {}).bounds(col2 - 40, col2Row - 12, 80, 12).build()).active = false;
+        this.addRenderableWidget(
+            button(text("Particles"), col2 - 40, col2Row - 12, 80, 12, button -> {})).active = false;
 
         particleShowCheckbox = this.addRenderableWidget(
-            Checkbox.builder(Component.literal("Show Particles"), this.font)
-                .selected(config.particle.show)
-                .build());
-        particleShowCheckbox.setPosition(col2 - 40, col2Row);
+            makeCheckbox(col2 - 40, col2Row, text("Show Particles"), config.particle.show));
 
         col2Row += spacing;
-        particleDistanceBox = new EditBox(this.font, col2 - 20, col2Row, 40, 16, Component.literal("Particle Distance"));
+        particleDistanceBox = new EditBox(this.font, col2 - 20, col2Row, 40, 16, text("Particle Distance"));
         particleDistanceBox.setValue(String.valueOf(config.particle.distance));
         this.addRenderableWidget(particleDistanceBox);
 
         int col3Row = 25;
-        this.addRenderableWidget(Button.builder(Component.literal("In-World"),
-            button -> {}).bounds(col3 - 40, col3Row - 12, 80, 12).build()).active = false;
+        this.addRenderableWidget(
+            button(text("In-World"), col3 - 40, col3Row - 12, 80, 12, button -> {})).active = false;
 
-        inWorldModeButton = this.addRenderableWidget(Button.builder(
-            Component.literal("Mode: " + config.inWorld.mode.name()),
+        inWorldModeButton = this.addRenderableWidget(button(
+            text("Mode: " + config.inWorld.mode.name()), col3 - 40, col3Row, 80, 18,
             button -> {
                 Config.Mode[] values = Config.Mode.values();
                 int currentIndex = config.inWorld.mode.ordinal();
                 int nextIndex = (currentIndex + 1) % values.length;
                 config.inWorld.mode = values[nextIndex];
-                button.setMessage(Component.literal("Mode: " + config.inWorld.mode.name()));
+                button.setMessage(text("Mode: " + config.inWorld.mode.name()));
             }
-        ).bounds(col3 - 40, col3Row, 80, 18).build());
+        ));
 
         col3Row += spacing;
-        inWorldDistanceBox = new EditBox(this.font, col3 - 20, col3Row, 40, 16, Component.literal("In-World Distance"));
+        inWorldDistanceBox = new EditBox(this.font, col3 - 20, col3Row, 40, 16, text("In-World Distance"));
         inWorldDistanceBox.setValue(String.valueOf(config.inWorld.distance));
         this.addRenderableWidget(inWorldDistanceBox);
 
         col3Row += spacing;
         onlyWhenLookingAtCheckbox = this.addRenderableWidget(
-            Checkbox.builder(Component.literal("Only When Looking At"), this.font)
-                .selected(config.inWorld.onlyWhenLookingAt)
-                .build());
-        onlyWhenLookingAtCheckbox.setPosition(col3 - 40, col3Row);
+            makeCheckbox(col3 - 40, col3Row, text("Only When Looking At"), config.inWorld.onlyWhenLookingAt));
 
         col3Row += spacing;
         inWorldOnlyWhenHurtCheckbox = this.addRenderableWidget(
-            Checkbox.builder(Component.literal("Only When Hurt"), this.font)
-                .selected(config.inWorld.onlyWhenHurt)
-                .build());
-        inWorldOnlyWhenHurtCheckbox.setPosition(col3 - 40, col3Row);
+            makeCheckbox(col3 - 40, col3Row, text("Only When Hurt"), config.inWorld.onlyWhenHurt));
 
         col3Row += spacing;
-        damageNumberTypeButton = this.addRenderableWidget(Button.builder(
-            Component.literal("Damage Numbers: " + config.bar.damageNumberType.name()),
+        damageNumberTypeButton = this.addRenderableWidget(button(
+            text("Damage Numbers: " + config.bar.damageNumberType.name()), col3 - 40, col3Row, 80, 18,
             button -> {
                 Config.NumberType[] values = Config.NumberType.values();
                 int currentIndex = config.bar.damageNumberType.ordinal();
                 int nextIndex = (currentIndex + 1) % values.length;
                 config.bar.damageNumberType = values[nextIndex];
-                button.setMessage(Component.literal("Damage Numbers: " + config.bar.damageNumberType.name()));
+                button.setMessage(text("Damage Numbers: " + config.bar.damageNumberType.name()));
             }
-        ).bounds(col3 - 40, col3Row, 80, 18).build());
+        ));
 
         int maxRow = Math.max(topRow, Math.max(col2Row, col3Row));
 
         int minBottomY = Math.max(maxRow + 35, this.height - 50);
-        this.addRenderableWidget(Button.builder(Component.literal("Save"), button -> this.save())
-            .bounds(this.width / 2 - 155, minBottomY, 70, 20).build());
+        this.addRenderableWidget(
+            button(text("Save"), this.width / 2 - 155, minBottomY, 70, 20, button -> this.save()));
 
-        this.addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> {
-            if (this.minecraft != null) {
-                this.minecraft.setScreen(this.parent);
-            }
-        }).bounds(this.width / 2 - 75, minBottomY, 70, 20).build());
+        this.addRenderableWidget(button(text("Cancel"), this.width / 2 - 75, minBottomY, 70, 20,
+            button -> returnToParent()));
 
-        this.addRenderableWidget(Button.builder(Component.literal("Reset to Defaults"), button -> this.resetToDefaults())
-            .bounds(this.width / 2 + 5, minBottomY, 120, 20).build());
+        this.addRenderableWidget(button(text("Reset to Defaults"), this.width / 2 + 5, minBottomY, 120, 20,
+            button -> this.resetToDefaults()));
     }
 
     private void save() {
@@ -219,9 +262,7 @@ public class ConfigScreen extends Screen {
 
             ToroHealth.saveConfig();
 
-            if (this.minecraft != null) {
-                this.minecraft.setScreen(this.parent);
-            }
+            returnToParent();
         } catch (NumberFormatException e) {
             ToroHealth.LOGGER.error("Invalid number format in config screen", e);
         }
@@ -244,13 +285,56 @@ public class ConfigScreen extends Screen {
         config.inWorld.mode = defaultConfig.inWorld.mode;
         config.bar.damageNumberType = defaultConfig.bar.damageNumberType;
 
-        anchorPointButton.setMessage(Component.literal("Anchor: " + config.hud.anchorPoint.name()));
-        inWorldModeButton.setMessage(Component.literal("Mode: " + config.inWorld.mode.name()));
-        damageNumberTypeButton.setMessage(Component.literal("Damage Numbers: " + config.bar.damageNumberType.name()));
+        anchorPointButton.setMessage(text("Anchor: " + config.hud.anchorPoint.name()));
+        inWorldModeButton.setMessage(text("Mode: " + config.inWorld.mode.name()));
+        damageNumberTypeButton.setMessage(text("Damage Numbers: " + config.bar.damageNumberType.name()));
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+    //? if <1.20 {
+    /*public void render(PoseStack poseStack, int mouseX, int mouseY, float partialTick) {
+        super.render(poseStack, mouseX, mouseY, partialTick);
+
+        int col1 = this.width / 6;
+        int col2 = this.width / 2;
+        int col3 = this.width - this.width / 6;
+
+        GuiComponent.drawString(poseStack, this.font, "Distance:", col1 - 55, 30, 0xFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "X Pos:", col1 - 55, 48, 0xFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Y Pos:", col1 - 55, 66, 0xFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Scale:", col1 - 55, 84, 0xFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Delay:", col1 - 55, 102, 0xFFFFFF);
+
+        GuiComponent.drawString(poseStack, this.font, "Distance:", col2 - 55, 120, 0xFFFFFF);
+
+        GuiComponent.drawString(poseStack, this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
+    }
+    *///?} elif >=26.1 {
+    // Screen.render(GuiGraphics, ...) was renamed/restructured into
+    // extractRenderState(GuiGraphicsExtractor, ...) in 26.2 (confirmed via
+    // javap - no render(GuiGraphics,...) survivor on Screen at all), matching
+    // the same GuiGraphics->GuiGraphicsExtractor + drawString->text rename
+    // already applied throughout this port (see PlatformHudCanvas).
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY,
+        float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+
+        int col1 = this.width / 6;
+        int col2 = this.width / 2;
+        int col3 = this.width - this.width / 6;
+
+        guiGraphics.text(this.font, "Distance:", col1 - 55, 30, 0xFFFFFF);
+        guiGraphics.text(this.font, "X Pos:", col1 - 55, 48, 0xFFFFFF);
+        guiGraphics.text(this.font, "Y Pos:", col1 - 55, 66, 0xFFFFFF);
+        guiGraphics.text(this.font, "Scale:", col1 - 55, 84, 0xFFFFFF);
+        guiGraphics.text(this.font, "Delay:", col1 - 55, 102, 0xFFFFFF);
+
+        guiGraphics.text(this.font, "Distance:", col2 - 55, 120, 0xFFFFFF);
+
+        guiGraphics.text(this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
+    }
+    //?} else {
+    /*public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
         int col1 = this.width / 6;
@@ -267,11 +351,10 @@ public class ConfigScreen extends Screen {
 
         guiGraphics.drawString(this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
     }
+    *///?}
 
     @Override
     public void onClose() {
-        if (this.minecraft != null) {
-            this.minecraft.setScreen(this.parent);
-        }
+        returnToParent();
     }
 }

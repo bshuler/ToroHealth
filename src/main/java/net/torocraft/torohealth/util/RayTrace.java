@@ -84,7 +84,11 @@ public class RayTrace {
       return client.level.clip(context);
     }
     Vec3 to = context.getTo();
+    //? if <1.19 {
+    /*return BlockHitResult.miss(to, Direction.DOWN, new BlockPos(to));
+    *///?} else {
     return BlockHitResult.miss(to, Direction.DOWN, BlockPos.containing(to));
+    //?}
   }
 
 }

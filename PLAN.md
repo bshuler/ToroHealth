@@ -29,11 +29,20 @@ recorded below — never silently dropped from the matrix.
 
 | MC version | Fabric | Forge | NeoForge |
 |---|---|---|---|
-| 26.2 (newest stable) | ☐ | — | ☐ |
-| 1.21.4 | ☐ | — | ☐ |
-| 1.20.1 | ☐ | ☐ | — |
-| 1.19.4 | ☐ | ☐ | — |
-| 1.18.2 | ☐ | ☐ | — |
+| 26.2 (newest stable) | ✅ | — | ✅ |
+| 1.21.4 | ✅ | — | ✅ |
+| 1.20.1 | ✅ | ✅ | — |
+| 1.19.4 | ✅ | ✅ | — |
+| 1.18.2 | ✅ | ✅ | — |
+
+10/10 target cells build green, each spot-checked via
+`unzip -l <jar> | grep -c "\.class$"` / `grep "net/torocraft"` to confirm
+real mod classes are present (31-42 classes per jar depending on cell), not
+just a green-but-empty jar. 26.2-fabric (41 classes) and 26.2-neoforge (42
+classes) are the newest additions — see "26.2" below for the full API-delta
+list. Work is committed locally but **not yet pushed** — see "Parked
+commits" below; 1Password commit signing is currently unavailable in this
+environment.
 
 Newest stable MC confirmed live against
 `https://meta.fabricmc.net/v2/versions/game` at task start: **26.2**
@@ -45,16 +54,92 @@ Porting order: **1.21.4-fabric → 1.21.4-neoforge → 1.20.1-fabric →
 first via `neoforge-1.21.8`, then walk backwards; 26.2 last since it is
 expected to need its own port per gotcha (c)).
 
-## 26.2
+## 26.2 — ✅ both cells green (fabric + neoforge)
 
-Not yet attempted. Expected blocker per house guidance: `GuiGraphics` is
-removed from the render pipeline in 26.2 (HUD/world rendering moved to
-`extractRenderState()` populating a `GuiRenderState`/render-state object
-consumed later, off the render thread). This is a bigger rewrite than a
-version bump — `Hud`, `BarDisplay`, `EntityDisplay`, and the GUI half of
-`HealthBarRenderer` would all need a render-state-extraction rewrite, not
-just new Stonecutter predicates. Will attempt after 1.21.4 is green;
-recording live findings here rather than skipping silently.
+Confirmed a genuinely bigger rewrite than a version bump, per the original
+expectation below, but fully resolved. Every delta below was confirmed
+against real jar content via `javap`/`unzip -l` before writing the fix —
+none guessed from memory or extrapolated from 1.21.4.
+
+**Entity package moves** (`net.minecraft.world.entity.*` reorganization —
+confirmed via `unzip -l` against the real
+`minecraft-merged-deobf-26.2.jar`):
+- `Chicken`: `...animal.Chicken` → `...animal.chicken.Chicken`
+- `Villager`: `...npc.Villager` → `...npc.villager.Villager`
+- `AbstractFish`: `...animal.AbstractFish` → `...animal.fish.AbstractFish`
+- `Squid`: `...animal.Squid` → `...animal.squid.Squid`
+- `Slime`: `...monster.Slime` → `...monster.cubemob.Slime`
+- Unchanged: `Monster`, `Ghast`, `Animal`, `AmbientCreature`, `AgeableMob`,
+  `ArmorStand`, `Creeper`.
+- Affected: `util/EntityUtil.java`, `display/EntityDisplay.java`.
+
+**`SwordItem` removed entirely** (confirmed via `unzip -l` — no survivor
+anywhere in the jar; `DiggerItem`/`TieredItem` also gone). Swords are now a
+plain `Item` identified only via the `ItemTags.SWORDS` tag. `ItemStack`
+also lost its `is(TagKey<Item>)` convenience overload (only
+`is(Predicate<Holder<Item>>)` remains) — the replacement pattern is
+`item.builtInRegistryHolder().is(ItemTags.SWORDS)`, since
+`Item.builtInRegistryHolder()` returns `Holder$Reference<Item>` and
+`Holder.is(TagKey<T>)` survives. `AxeItem`/`BowItem`/`CrossbowItem`/
+`TridentItem`/`PotionItem` unchanged. Affected:
+`util/HoldingWeaponUpdater.java`.
+
+**Renames** (each confirmed via `javap -p` on the extracted class — old name
+has zero survivors):
+- `GameRenderer.getMainCamera()` → `mainCamera()`.
+- `Camera.getPosition()` → `position()`.
+- `Minecraft.setScreen(Screen)` → `setScreenAndShow(Screen)`.
+- Affected: `bars/BarParticle.java`, `client/ConfigScreen.java`.
+
+**`Screen.render(GuiGraphics,...)` restructured into
+`extractRenderState(GuiGraphicsExtractor,...)`** — no `render(GuiGraphics,
+...)` survivor on `Screen` at all. `GuiGraphicsExtractor.drawString(...)` is
+now `.text(Font, String, int, int, int)` (and other overloads), matching
+the rename `PlatformHudCanvas` already used for its own `>=26.1` branch.
+Affected: `client/ConfigScreen.java` (3-way `<1.20` / `elif >=26.1` / `else`
+split for its render override).
+
+**NeoForge-specific**: `RenderLevelStageEvent` was restructured in 26.2
+(confirmed via `javap` against the real `neoforge-26.2.0.58` jar) — it
+dropped its `Stage` enum + `getStage()` in favor of one concrete subclass
+per stage, and critically none of those subclasses expose a
+`SubmitNodeCollector` anymore. `SubmitCustomGeometryEvent` is the only
+NeoForge 26.2 event that still exposes one, so it replaces
+`RenderLevelStageEvent.AFTER_PARTICLES` for this mod's world-render hook.
+`RegisterGuiLayersEvent`/`GuiLayer` are structurally unchanged apart from
+`GuiGraphics` → `GuiGraphicsExtractor`. Affected: `ClientEventHandler.java`
+(new `neoforge && >=26.1` arm).
+
+**Fabric-specific**: 26.2's Fabric API replaced `HudRenderCallback`/
+`WorldRenderEvents.AFTER_TRANSLUCENT` with `HudElementRegistry` (draw method
+takes `GuiGraphicsExtractor`+`DeltaTracker`) and
+`LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES` (`LevelRenderContext` exposes
+`poseStack()`+`submitNodeCollector()` but, like every other 26.1+
+world-render hook, no `Camera` accessor — fetched separately via
+`gameRenderer.mainCamera()`). `ClientTickEvents` unchanged. Affected:
+`ClientEventHandler.java` (new `fabric && >=26.1` arm).
+
+### Gotcha (e): Stonecutter's live-sync file watcher is not safe for arms mixing bare `//` prose outside a `/* */`-wrapped code body
+
+Switching active project via `./gradlew "Set active project to <mc>-<loader>"`
+makes Stonecutter rewrite `src/main/java` in place to toggle which
+`//? if/elif/else` arm is live vs `/* */`-wrapped. This is normally safe,
+but one switch (`26.2-fabric` → `26.2-neoforge`) corrupted
+`ClientEventHandler.java`: the `neoforge && >=26.1` arm had its
+explanatory "why" comment written as bare `// ...` lines sitting just
+*before* the `/* */` wrapper boundary rather than fully inside it, and the
+toggle stripped the leading `//` off those lines without adjusting the
+`/* */` boundary to match, turning valid comment text into bare tokens the
+Java parser choked on (`Unclosed scope`, then ~69 cascading parse errors).
+The fix was to re-add the stripped `//` prefixes — the actual code
+underneath was untouched. **Lesson**: keep explanatory comments fully
+inside the arm's own `/* */` wrapper (or fully inside the live arm's plain
+`//` styling) rather than straddling the boundary, and re-`Read` any file
+with mixed comment styles after every active-project switch before trusting
+the next build. (Separately: this file's pre-existing nested `/^ ... ^/`
+delimiter — used for an inner if/else nested inside an already-inactive
+outer arm, since Java can't nest `/* */` — is intentional, not corruption;
+it predates this session and was not touched.)
 
 ## Single merged jar (Forgix)
 
@@ -111,32 +196,71 @@ lifecycle/rendering events have been stable since well before 1.18).
 
 ## Milestones (commit log, updated as work lands)
 
-1. ☐ `CLAUDE.md` + `PLAN.md` written and committed (this commit).
-2. ☐ Stonecutter/Stonecraft scaffold (`settings.gradle.kts`,
+1. ✅ `CLAUDE.md` + `PLAN.md` written and committed.
+2. ✅ Stonecutter/Stonecraft scaffold (`settings.gradle.kts`,
    `stonecutter.gradle.kts`, `build.gradle.kts`, `gradle.properties`,
    Gradle 9 wrapper, `versions/dependencies/*.properties`) committed;
    legacy pre-Stonecutter build files and old source tree removed.
-3. ☐ 1.21.4-fabric green build.
-4. ☐ 1.21.4-neoforge green build.
-5. ☐ 1.20.1-fabric green build.
-6. ☐ 1.20.1-forge green build.
-7. ☐ 1.19.4-fabric green build.
-8. ☐ 1.19.4-forge green build.
-9. ☐ 1.18.2-fabric green build.
-10. ☐ 1.18.2-forge green build.
-11. ☐ 26.2 attempted; result (green or documented blocker) recorded here.
-12. ☐ Forgix re-verified for this repo; decision recorded.
-13. ☐ Final report delivered.
+3. ✅ 1.21.4-fabric green build (jar-verified).
+4. ✅ 1.21.4-neoforge green build (jar-verified).
+5. ✅ 1.20.1-fabric green build (jar-verified).
+6. ✅ 1.20.1-forge green build (jar-verified).
+7. ✅ 1.19.4-fabric green build (jar-verified).
+8. ✅ 1.19.4-forge green build (jar-verified).
+9. ✅ 1.18.2-fabric green build (jar-verified).
+10. ✅ 1.18.2-forge green build (jar-verified; required the
+    `RenderGameOverlayEvent` Forge-GUI-overlay delta below).
+11. ✅ 26.2-fabric green build (jar-verified, 41 classes).
+12. ✅ 26.2-neoforge green build (jar-verified, 42 classes).
+13. ☐ Forgix re-verified for this repo; decision recorded.
+14. ☐ Final report delivered.
+
+## Parked commits (1Password commit signing unavailable)
+
+`git commit` failed twice in this environment with two different 1Password
+agent errors (`agent returned an error`, then `failed to fill whole
+buffer`) — the signing agent is genuinely down right now, not a one-off.
+Per the binding git-signing rule, signing was never bypassed; instead the
+already-staged work was parked as commit messages + exact retry commands
+in the scratchpad, to be replayed on a future human turn once signing
+recovers:
+
+1. `/private/tmp/claude-501/-Users-bshuler-code/3309436f-5239-4605-ab94-a3e38563bb44/scratchpad/torohealth-parked-commit-canvas-abstraction.txt` —
+   `refactor: introduce HudCanvas abstraction for cross-era HUD rendering`
+   (`render/HudCanvas.java`, `render/PlatformHudCanvas.java`,
+   `display/BarDisplay.java`, `display/EntityDisplay.java`,
+   `display/Hud.java`). Land **first**.
+2. `/private/tmp/claude-501/-Users-bshuler-code/3309436f-5239-4605-ab94-a3e38563bb44/scratchpad/torohealth-parked-commit-1182-cross-version-fixes.txt` —
+   `fix: port cross-version API deltas so 1.18.2 and 1.19.4/1.20.1-forge build green`
+   (`ClientEventHandler.java`, `ToroHealth.java`,
+   `bars/HealthBarRenderer.java`, `bars/ParticleRenderer.java`,
+   `client/ConfigScreen.java`, `util/RayTrace.java`,
+   `stonecutter.gradle.kts`). Land **second** (depends on #1's
+   `Hud.java`/`render/` state).
+3. `/private/tmp/claude-501/-Users-bshuler-code/3309436f-5239-4605-ab94-a3e38563bb44/scratchpad/torohealth-parked-commit-1.20.1-fabric.txt` —
+   an older, narrower parked commit from an earlier session, predates both
+   of the above and never landed. Diff its listed fixes
+   (`ConfigScreen.java`/`ClientEventHandler.java`/`HealthBarRenderer.java`)
+   against the current working tree before replaying — it may already be
+   superseded by #1/#2 above.
+
+Once landed, `git push origin main` directly (no PR, per the house git
+rule) — nothing here needs review, only unblocking.
 
 ## Open problems (live)
 
-- `ConfigLoader`'s constructor currently resolves its own config directory
-  via loader APis (`FMLPaths`/`FabricLoader`), which are unavailable on
-  `src/main`'s classpath. Plan: change constructor to take a `File
-  configDir` parameter, resolved by each loader's client entry point.
-- `HoldingWeaponUpdater` uses NeoForge-specific `Tags.Items.MELEE_WEAPON_TOOLS`;
-  needs a portable `instanceof`-based rewrite (see `CLAUDE.md`).
-- Exact per-loader event class names for 1.18.2/1.19.4 Forge and for
-  1.20.1 Forge are design-intent only until confirmed by a real compile —
-  do not trust the table in `CLAUDE.md` blindly when porting; update it
-  once each cell compiles.
+- Git commits are currently **parked, not pushed** — see "Parked commits"
+  above. Retry on a future turn; do not poll or bypass signing.
+- 26.2 is now green on both cells (see "26.2" section above for the full
+  applied API-delta list and the Stonecutter live-sync corruption gotcha).
+- Forgix composability with Stonecraft not yet independently re-verified
+  for this repo (see "Single merged jar (Forgix)" above).
+- `ConfigLoader`'s constructor takes its config directory as a `File`
+  parameter (resolved) — this was the original open problem and is
+  resolved; kept here as a historical note since `CLAUDE.md` still
+  documents the resulting design.
+- Exact per-loader event class names are now confirmed by real compiles
+  for every currently-active cell (1.18.2/1.19.4 Forge, 1.20.1 Forge,
+  1.21.4 NeoForge) — see the newly-discovered 1.18.2-forge
+  `RenderGameOverlayEvent` delta folded into `CLAUDE.md`'s event-registration
+  table. 26.2's NeoForge event shape is not yet confirmed.
