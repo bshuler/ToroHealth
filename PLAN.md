@@ -370,3 +370,16 @@ disregarded — their content is now in git history.
   1.21.4 NeoForge) — see the newly-discovered 1.18.2-forge
   `RenderGameOverlayEvent` delta folded into `CLAUDE.md`'s event-registration
   table. 26.2's NeoForge event shape is not yet confirmed.
+
+## Coverage in context (measured 2026-08-13)
+
+Read from the JaCoCo XML report, not from whether the gate passes:
+
+- **Analysed surface:** 15 of 33 compiled classes (45%).
+- **Line coverage of that surface:** 100.0% (178 lines analysed).
+- Classes outside that surface are excluded by the documented exclusion list. They
+  are not covered by any test and are not runtime-verified.
+  Measured from `ToroHealth/versions/1.18.2-fabric/build/reports/jacoco/test/jacocoTestReport.xml`.
+
+A passing `check` means "no regression inside the analysed surface" — it does not
+mean the whole codebase is tested to that percentage.

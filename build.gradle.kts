@@ -11,6 +11,28 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+// NeoForge's transitive net.neoforged.fancymodloader:junit-fml (<=9.0.18) auto-registers a
+// LauncherSessionListener that looks up a run-config file "mainargs.txt" via a relative path
+// that doesn't resolve under Gradle's test-worker working directory, failing `test` at
+// JUnit-launcher startup with NoSuchFileException: mainargs.txt. Forcing the upstream-fixed
+// junit-fml 10.0+ doesn't work either (NoClassDefFoundError:
+// net/neoforged/fml/startup/StartupArgs - it needs a newer FML core than these NeoForge
+// releases ship). This repo's tests are plain pure-logic JUnit tests that need no FML
+// bootstrap at all, so junit-fml is excluded from the test runtime classpath. Same approach
+// as the sibling critical-orientation / EasierVillagerTrading / FlightHud /
+// simple-utilities-mod / ToroHealth repos.
+//
+// Caveat, recorded 2026-08-13 so nobody re-derives it: excluding junit-fml is the
+// right call *for these repos*, not a universal one. junit-fml is precisely
+// NeoForge's own loaded-test bootstrap - it is what stands FML up so a test can
+// run against a real, loaded game. NeoForge's supported loaded-test path
+// (`neoForge { unitTest { enable(); testedMod = ... } }`, the `testframework`
+// artifact, `@ExtendWith(EphemeralTestServerProvider.class)`, `runGameTestServer`)
+// is ModDevGradle-only, and this repo builds on Architectury Loom via Stonecraft,
+// so that path is unavailable here regardless. Excluding junit-fml therefore costs
+// nothing today. If a cell is ever migrated to ModDevGradle, this exclusion must
+// be revisited before writing any loaded NeoForge test - it would silently disable
+// the very bootstrap such a test depends on.
 if (mod.isNeoforge) {
     // NeoForge's own POM pulls in fancymodloader's junit-fml, which registers a JUnit
     // Platform LauncherSessionListener that unconditionally expects a mainargs.txt
