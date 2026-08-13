@@ -204,18 +204,24 @@ pattern from the sibling `critical-orientation`/`FlightHud`/
 `critical-flight-details`/`EasierVillagerTrading`/`simple-utilities-mod`
 repos (including the NeoForge `junit-fml`/`mainargs.txt` classpath-exclusion
 guard, gated `if (mod.isNeoforge)`, and the Forge
-`compileTestJava`-depends-on-`generatePackMCMetaJson` fix). Tests run
-against whichever Stonecutter node is currently `active` (`1.21.4-fabric`
-as of this writing — matches `vcsVersion`) — **never** across the full
-matrix, and never by hand-toggling `//? if` markers to reach another node's
-code.
+`compileTestJava`-depends-on-`generatePackMCMetaJson` fix).
 
 ```bash
-./gradlew test                             # active-project tests only
+./gradlew test                             # runs the suite on EVERY cell in the matrix
+./gradlew :1.21.4-fabric:test              # one cell only
 ./gradlew jacocoTestReport                 # HTML+XML report, active project
 ./gradlew check                            # test + 100% coverage gate
-./gradlew "Set active project to <mc>-<loader>"   # switch node before re-testing another cell
+./gradlew "Set active project to <mc>-<loader>"   # switch the IDE/runClient node
 ```
+
+A bare `./gradlew test` runs the suite on **every** cell, not just the
+active one — so any new test must compile and pass on all ten, 1.18.2
+included. (An earlier revision of this document claimed tests run only
+against the active node and "**never** across the full matrix"; that was
+wrong, and the Tier 1 work below depends on it being wrong.) The active
+node still matters for `jacocoTestReport`/`check` and for `runClient`, and
+it is still switched only via the Gradle task — never by hand-toggling
+`//? if` markers to reach another node's code.
 
 `tasks.check` depends on `jacocoTestCoverageVerification`, which enforces
 `LINE COVEREDRATIO 1.00` (100%) over the classes below. This is a real,
@@ -246,6 +252,69 @@ resolution lives at the `ToroHealth.java` call site instead (excluded, per
 above). `FileWatcher`'s full `run()` lifecycle is exercised against a
 **real** `WatchService`/filesystem write in addition to hand-rolled fakes
 for the pure `pollEvents()` branch logic.
+
+### Loaded-game tests (Tier 1)
+
+`src/test/java/net/torocraft/torohealth/LoadedGameTest.java` runs against a
+**real, bootstrapped Minecraft and a real Fabric loader**, not mocks, via
+`net.fabricmc:fabric-loader-junit:0.19.3`. Nine tests, verified green on all
+five Fabric cells (1.18.2, 1.19.4, 1.20.1, 1.21.4, 26.2). The whole file is
+wrapped in `//? if fabric { … //?}` and the dependency is gated
+`if (mod.isFabric)`, because NeoForge's equivalent bootstrap (`junit-fml`) is
+reachable only from ModDevGradle, not from Architectury Loom — see the long
+`junit-fml` comment in `build.gradle.kts`. The five Forge/NeoForge cells keep
+only the headless tests.
+
+What the loaded game buys over the headless suite (which already covers every
+pure branch, hand-fed):
+
+| Test | What only a loaded game can check |
+|---|---|
+| `gameDataIsActuallyLoaded` | harness guard — if the bootstrap ever silently no-ops, every other assertion here goes vacuous |
+| `modIsDiscoveredByARealFabricLoader` | the *processed* `fabric.mod.json` (Stonecraft templating applied) is discoverable by a genuine loader |
+| `declaredDependencyRangesAreSatisfiableInThisCell` | each `DEPENDS` range actually matches the provider version present in that cell |
+| `everyLivingEntityTypeYieldsAUsableHealthBar` | every registered living type has a positive, finite max health — `BarDisplay:50` divides by it with no guard |
+| `damageDeltaAgreesWithVanillaCeil` | `BarStateMath`'s deliberately Minecraft-free `ceil` copy still agrees with vanilla `Mth.ceil` |
+| `damageDeltaMatchesRealEntityMaxHealthValues` | same, driven off real registry max-health values rather than invented ones |
+| `damageIndicatorLingersExactlyOneRealSecond` | `HEALTH_INDICATOR_DELAY * 2` is still one real `SharedConstants.TICKS_PER_SECOND` |
+| `configRoundTripsThroughTheRealLoaderConfigDir` | write/read/`update()` round trip through `FabricLoader.getConfigDir()`, not a temp dir |
+| `realWeaponItemsAreClassifiedAsWeapons` | the weapon check still recognises real vanilla items after 26.x deleted `SwordItem` |
+
+Two things this class had to discover about a headless bootstrap, both of
+which cost a red build first and are written up at length in the source:
+
+- **26.x data components.** `Bootstrap.bootStrap()` no longer leaves an
+  `Item`'s components usable; they are built from
+  `BuiltInRegistries.DATA_COMPONENT_INITIALIZERS` and bound afterwards, so
+  constructing any `ItemStack` before that throws `Components not bound yet`.
+- **Vanilla tags are not bound by `Bootstrap.bootStrap()` at all.** Tags are
+  datapack content, so `Holder.Reference.is(TagKey)` throws
+  `IllegalStateException: Tags not bound` — which is exactly how 26.x's
+  tag-based sword check failed. Rather than skip the assertion, the bootstrap
+  now opens vanilla's own built-in data pack (it ships inside the Minecraft
+  jar already on the test classpath) and runs the real `TagLoader` over it.
+  Three API traps on that path, all silent: the void
+  `TagLoader.loadTagsForRegistry(ResourceManager, WritableRegistry)` overload
+  discards its result; `WritableRegistry.bindTags(Map)` fills the named
+  `HolderSet`s but not per-holder membership; and
+  `Registry.prepareTagReload(...).apply()` — the other public route to the
+  private `refreshTagsInHolders()` — asserts the registry is already frozen,
+  which after a bare bootstrap it is not. The working sequence is
+  `bindTags(map)` then `freeze()`.
+
+`realWeaponItemsAreClassifiedAsWeapons` carries a byte-for-byte copy of
+`HoldingWeaponUpdater#isWeapon` (private, and its only public entry point
+needs a live `Minecraft` and `Player`) including that method's own
+`//? if >=26.1` split. **Keep the two in sync.** The 26.2 cell emits one
+deprecation note for `Item.builtInRegistryHolder()`; that is deliberate — the
+production code calls the same deprecated method, and the copy would stop
+being a copy if the test called something else.
+
+What Tier 1 still does *not* cover: anything that needs a window or a GL
+context (all of `display/**`, `render/**`, the bar/particle renderers), and
+anything on a NeoForge or Forge cell. Those are Tier 3 (Fabric client
+gametest under xvfb) and Tier 4 (NeoForge `testframework`, blocked under
+Loom) respectively.
 
 ## Version matrix (target)
 

@@ -383,3 +383,129 @@ Read from the JaCoCo XML report, not from whether the gate passes:
 
 A passing `check` means "no regression inside the analysed surface" — it does not
 mean the whole codebase is tested to that percentage.
+
+## Tier 1: loaded-game testing (added 2026-08-13)
+
+`src/test/java/net/torocraft/torohealth/LoadedGameTest.java`, nine tests, run
+against a real bootstrapped Minecraft and a real Fabric loader via
+`net.fabricmc:fabric-loader-junit:0.19.3` (dependency gated `if (mod.isFabric)`,
+whole test file wrapped `//? if fabric { … //?}`).
+
+1. `gameDataIsActuallyLoaded` — harness guard: real `Items.DIAMOND_SWORD`,
+   >50 registered entity types.
+2. `modIsDiscoveredByARealFabricLoader` — the *processed* `fabric.mod.json`
+   (`${id}` etc. expanded by Stonecraft) is on the test runtime classpath and a
+   genuine loader finds `torohealth`.
+3. `declaredDependencyRangesAreSatisfiableInThisCell` — every `Kind.DEPENDS`
+   range in that cell's manifest actually `matches(...)` the provider version
+   present.
+4. `everyLivingEntityTypeYieldsAUsableHealthBar` — for every registered living
+   entity type with default attributes: max health positive and finite,
+   `Mth.ceil(maxHealth) >= 1` (a zero-heart bar), and health fractions at 0 /
+   half / full stay inside `[0,1]`. This exists because `BarDisplay:50`
+   computes `health / maxHealth` with **no** clamp, unlike
+   `HealthBarRenderer:149` which does clamp.
+5. `damageDeltaAgreesWithVanillaCeil` — sweeps before/after health pairs
+   through `BarStateMath` and checks `lastDmg` against `Mth.ceil(before) -
+   Mth.ceil(after)`. `BarStateMath` hand-copies `ceil` on purpose (GOTCHA cc:
+   zero Minecraft classes on its compile classpath), so nothing else keeps the
+   copy honest.
+6. `damageDeltaMatchesRealEntityMaxHealthValues` — same state machine, driven
+   off each registered living type's real max health instead of invented
+   numbers, and also asserts `lastDmgCumulative`.
+7. `damageIndicatorLingersExactlyOneRealSecond` — pins
+   `HEALTH_INDICATOR_DELAY * 2` to `SharedConstants.TICKS_PER_SECOND` and
+   walks the indicator tick by tick, asserting it neither clears early nor
+   late.
+8. `configRoundTripsThroughTheRealLoaderConfigDir` — writes, re-reads and
+   `update()`s a config in `FabricLoader.getInstance().getConfigDir()`, the
+   real directory, asserting the deserialized instance is not the defaults
+   object and that the transient derived field was recomputed.
+   `watchForChanges` is turned off so no `FileWatcher` thread leaks out of the
+   test.
+9. `realWeaponItemsAreClassifiedAsWeapons` — real diamond sword / axe /
+   trident / bow / crossbow / potion classify as weapons; dirt, a diamond
+   pickaxe and an apple do not (so a branch that started returning `true` for
+   everything would fail).
+
+### Verified, not assumed
+
+`./gradlew test` runs every cell. Parsed from
+`versions/*/build/test-results/test/TEST-*LoadedGameTest.xml`:
+
+```
+1.18.2-fabric  tests=9 skipped=0 failures=0 errors=0 time=14.270
+1.19.4-fabric  tests=9 skipped=0 failures=0 errors=0 time=23.186
+1.20.1-fabric  tests=9 skipped=0 failures=0 errors=0 time=26.952
+1.21.4-fabric  tests=9 skipped=0 failures=0 errors=0 time=27.315
+26.2-fabric    tests=9 skipped=0 failures=0 errors=0 time=18.264
+```
+
+The five Forge/NeoForge cells carry only the six headless suites, unchanged.
+`:1.21.4-fabric:check` (the 100% gate) still passes.
+
+### A headless bootstrap does not bind vanilla tags
+
+This one cost a red build and is the most reusable finding of the pass.
+`SharedConstants.tryDetectVersion()` + `Bootstrap.bootStrap()` loads code-side
+registries, but **tags are datapack content**, so nothing is bound until
+something reads `data/minecraft/tags/…` out of a pack. Every
+`Holder.Reference.is(TagKey)` throws `IllegalStateException: Tags not bound`
+until then — which is precisely how 26.x's tag-based sword check failed the
+first time this class ran (`HoldingWeaponUpdater` identifies swords by
+`ItemTags.SWORDS` because 26.x deleted `SwordItem` outright).
+
+The assertion was not skipped or weakened. The bootstrap now does headless
+what a dedicated server does at startup: opens vanilla's own built-in data
+pack — it ships inside the Minecraft jar already on the test classpath,
+~9000 `data/minecraft/**` entries including `tags/item/swords.json` — and runs
+the real `TagLoader` over it. Three silent traps on that path, all found by
+disassembling rather than by reading names:
+
+- `TagLoader.loadTagsForRegistry(ResourceManager, WritableRegistry)` (the void
+  overload) loads the tags and throws the result away; its entire body ends in
+  a `pop`. Use the three-argument overload that returns the map.
+- `WritableRegistry.bindTags(Map)` binds the named `HolderSet`s only, not the
+  per-holder membership `is(TagKey)` reads — so on its own it leaves the
+  registry looking loaded while every call still throws.
+- `Registry.prepareTagReload(...).apply()` is the other public route to the
+  private `refreshTagsInHolders()`, but it is the *reload* path and asserts
+  the registry is already frozen (`IllegalStateException: Invalid method used
+  for tag loading`). After a bare `Bootstrap.bootStrap()` it is not.
+
+Working sequence: load the map with the three-argument overload, `bindTags(map)`,
+then `freeze()` — `freeze()` ends in `refreshTagsInHolders()`. Only the item
+registry is bound, because that is all this mod reads; the whole block is
+guarded `//? if >=26.1`, since no pre-26 cell touches a tag.
+
+### 26.x needs an extra bootstrap step for data components
+
+Also guarded `//? if >=26.1`, and carried over from the sibling FlightHud /
+simple-utilities-mod work: through 1.21.4 an item's data components were baked
+into the `Item` at construction, but in 26.x they are produced by
+`BuiltInRegistries.DATA_COMPONENT_INITIALIZERS` from a `HolderLookup.Provider`
+and bound onto each `Holder.Reference` afterwards. Constructing any `ItemStack`
+before that runs throws `NullPointerException: Components not bound yet`.
+`VanillaRegistries.createLookup()` is the built-in-only provider available
+without a server.
+
+### Duplicated logic, deliberately
+
+`isWeapon` is a byte-for-byte copy of `HoldingWeaponUpdater#isWeapon`,
+including its `//? if >=26.1` split. The original is private and its only
+public entry point (`update()`) needs a live `Minecraft` and `Player`, so it
+cannot be called headless; `HoldingWeaponUpdater` stays on the JaCoCo exclusion
+list. **If the version split moves there, move it here too.** The 26.2 cell
+emits a single deprecation note for `Item.builtInRegistryHolder()` — expected,
+because the production method calls exactly that; "fixing" the note in the test
+would break the property that makes the copy meaningful.
+
+### What Tier 1 does *not* cover
+
+No window, no GL context, no rendering. `display/**`, `render/**`,
+`HealthBarRenderer`, `ParticleRenderer`, `BarParticle`, `ConfigScreen` and the
+loader entry points are untouched by these tests and remain on the JaCoCo
+exclusion list. Nothing here runs on a Forge or NeoForge cell. Those gaps are
+Tier 3 (Fabric client gametest under xvfb) and Tier 4 (NeoForge
+`testframework`, which is ModDevGradle-only and therefore blocked under
+Architectury Loom — documented, not implemented).
