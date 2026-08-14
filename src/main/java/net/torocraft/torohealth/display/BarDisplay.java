@@ -3,7 +3,12 @@ package net.torocraft.torohealth.display;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.torocraft.torohealth.bars.BarStates;
+import net.torocraft.torohealth.config.Config.Bar;
 import net.torocraft.torohealth.render.HudCanvas;
+import net.torocraft.torohealth.util.Colors;
+import net.torocraft.torohealth.util.EntityUtil;
+import net.torocraft.torohealth.util.EntityUtil.Relation;
 
 /**
  * No Stonecutter conditionals here - drawing goes entirely through
@@ -16,10 +21,10 @@ public class BarDisplay {
     return entity.getDisplayName().getString();
   }
 
-  public void draw(HudCanvas canvas, LivingEntity entity) {
+  public void draw(HudCanvas canvas, LivingEntity entity, Bar barConfig) {
     int xOffset = 0;
 
-    drawHealthBar(canvas, entity, 1, 14, 130);
+    drawHealthBar(canvas, entity, barConfig, 1, 14, 130);
 
     String name = getEntityName(entity);
     int healthMax = Mth.ceil(entity.getMaxHealth());
@@ -44,17 +49,40 @@ public class BarDisplay {
     }
   }
 
-  private void drawHealthBar(HudCanvas canvas, LivingEntity entity, int x, int y, int width) {
-    float health = entity.getHealth();
+  /**
+   * Background, then the trailing "ghost" bar at the entity's previous
+   * displayed health in the secondary colour, then current health in the
+   * primary colour - the same three layers, from the same four config
+   * options, as the in-world bar in {@code HealthBarRenderer}. Upstream drew
+   * both bars through one method and one pair of colours; this fork's port
+   * split them and left the HUD bar on a hardcoded green/yellow/red ramp that
+   * ignored the config entirely. See PLAN.md "Restored: friend/foe bar
+   * colours".
+   *
+   * <p>{@link Colors#opaqueIfNoAlpha} is required, not decorative: config
+   * colours arrive as {@code 0xRRGGBB} with a zero alpha byte, and
+   * {@code fill} has honoured alpha on every Minecraft version - so passing
+   * one straight through draws nothing anywhere.
+   */
+  private void drawHealthBar(HudCanvas canvas, LivingEntity entity, Bar barConfig, int x, int y,
+      int width) {
     float maxHealth = entity.getMaxHealth();
-    float healthPercent = health / maxHealth;
+    float healthPercent = Mth.clamp(entity.getHealth() / maxHealth, 0.0f, 1.0f);
+    float previousPercent =
+        Mth.clamp(BarStates.getState(entity).math.previousHealthDisplay / maxHealth, 0.0f, 1.0f);
 
-    int barWidth = (int) (width * healthPercent);
+    boolean friend = EntityUtil.determineRelation(entity) == Relation.FRIEND;
+    int primary = Colors.opaqueIfNoAlpha(friend ? barConfig.friendColor : barConfig.foeColor);
+    int secondary = Colors
+        .opaqueIfNoAlpha(friend ? barConfig.friendColorSecondary : barConfig.foeColorSecondary);
 
     canvas.fill(x, y, x + width, y + 4, 0xFF555555);
 
-    int color = healthPercent > 0.5f ? 0xFF00FF00 : (healthPercent > 0.25f ? 0xFFFFFF00 : 0xFFFF0000);
-    canvas.fill(x, y, x + barWidth, y + 4, color);
+    if (previousPercent > healthPercent) {
+      canvas.fill(x, y, x + (int) (width * previousPercent), y + 4, secondary);
+    }
+
+    canvas.fill(x, y, x + (int) (width * healthPercent), y + 4, primary);
   }
 
   private void renderArmorIcon(HudCanvas canvas, int x, int y) {

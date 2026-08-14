@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "torohealth-gametest",
+  "version": "1.0.0",
+  "name": "ToroHealth Client Game Test",
+  "description": "Tier 3 client gametest for ToroHealth Damage Indicators. Never shipped: this source set is not part of any published jar.",
+  "license": "GPL-3.0",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": [
+      "net.torocraft.torohealth.gametest.ToroHealthClientGameTest"
+    ]
+  },
+  "depends": {
+    "torohealth": "*"
+  }
+}

@@ -18,9 +18,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import net.torocraft.torohealth.ToroHealth;
+import net.torocraft.torohealth.config.Config.Bar;
 import net.torocraft.torohealth.config.Config.InWorld;
 import net.torocraft.torohealth.config.Config.Mode;
+import net.torocraft.torohealth.util.Colors;
 import net.torocraft.torohealth.util.EntityUtil;
+import net.torocraft.torohealth.util.EntityUtil.Relation;
 //? if <1.19 {
 /*import com.mojang.math.Matrix4f;
 *///?} else {
@@ -142,11 +145,40 @@ public class HealthBarRenderer {
   }
   //?}
 
+  /**
+   * Draws the three stacked layers upstream drew: a dark background, the
+   * "ghost" bar trailing at the entity's previous displayed health in the
+   * secondary colour, and the current health in the primary colour. Which
+   * pair of colours is used depends on {@link EntityUtil#determineRelation},
+   * exactly as upstream's {@code HealthBarRenderer#render} did.
+   *
+   * <p>This restores four config options - {@code bar.friendColor},
+   * {@code bar.friendColorSecondary}, {@code bar.foeColor} and
+   * {@code bar.foeColorSecondary} - that this fork's port had left wired to
+   * nothing at all: the ported renderer computed a fixed red-to-green health
+   * ramp and never read them, so the config file, the config screen and the
+   * lang files all offered four colour settings that could not change a
+   * single pixel. See PLAN.md "Restored: friend/foe bar colours".
+   *
+   * <p>The colours come out of config as {@code 0xRRGGBB} (ColorJsonAdapter
+   * masks the alpha byte off on read so that read(write(x)) round-trips), so
+   * they are unpacked through {@link Colors}, whose {@code alpha} applies the
+   * no-alpha-means-opaque fixup first. Unpacking the alpha naively here would
+   * make every in-world bar fully transparent on every version, which is the
+   * same class of bug as the 26.x text one - just self-inflicted.
+   */
   private static void renderHealthBar(Matrix4f matrix, VertexConsumer vertexConsumer,
       LivingEntity entity) {
     float health = entity.getHealth();
     float maxHealth = entity.getMaxHealth();
     float healthPercent = Mth.clamp(health / maxHealth, 0.0f, 1.0f);
+    float previousPercent =
+        Mth.clamp(BarStates.getState(entity).math.previousHealthDisplay / maxHealth, 0.0f, 1.0f);
+
+    boolean friend = EntityUtil.determineRelation(entity) == Relation.FRIEND;
+    Bar barConfig = ToroHealth.CONFIG.bar;
+    int primary = friend ? barConfig.friendColor : barConfig.foeColor;
+    int secondary = friend ? barConfig.friendColorSecondary : barConfig.foeColorSecondary;
 
     float barWidth = 1.0f;
     float barHeight = 0.1f;
@@ -154,13 +186,16 @@ public class HealthBarRenderer {
     drawQuad(matrix, vertexConsumer, -barWidth / 2, -barHeight / 2, barWidth, barHeight, 0.2f,
         0.2f, 0.2f, 1.0f);
 
-    if (healthPercent > 0) {
-      float healthWidth = barWidth * healthPercent;
-      float red = healthPercent < 0.5f ? 1.0f : 2.0f * (1.0f - healthPercent);
-      float green = healthPercent < 0.5f ? 2.0f * healthPercent : 1.0f;
+    if (previousPercent > healthPercent) {
+      drawQuad(matrix, vertexConsumer, -barWidth / 2, -barHeight / 2, barWidth * previousPercent,
+          barHeight, Colors.red(secondary), Colors.green(secondary), Colors.blue(secondary),
+          Colors.alpha(secondary));
+    }
 
-      drawQuad(matrix, vertexConsumer, -barWidth / 2, -barHeight / 2, healthWidth, barHeight, red,
-          green, 0.0f, 1.0f);
+    if (healthPercent > 0) {
+      drawQuad(matrix, vertexConsumer, -barWidth / 2, -barHeight / 2, barWidth * healthPercent,
+          barHeight, Colors.red(primary), Colors.green(primary), Colors.blue(primary),
+          Colors.alpha(primary));
     }
   }
 

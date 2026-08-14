@@ -47,11 +47,44 @@ public class Hud extends Screen {
   /*private static final ResourceLocation BACKGROUND_TEXTURE =
       new ResourceLocation(ToroHealth.MODID, "textures/gui/default_skin_basic.png");
   *///?}
+  /**
+   * Set the first time this HUD gets past its own guards and actually draws.
+   *
+   * <p>Purely diagnostic, and read from exactly one place: the Tier 3 client
+   * gametest (see {@code ToroHealthClientGameTest}). That test's real
+   * assertion is a pixel differential, but a differential alone cannot say
+   * <em>why</em> it read zero. This flag splits the two candidate causes
+   * apart: false means the chain from the loader's render hook through
+   * {@code ClientEventHandler} to here never completed - wrong hook for this
+   * version, or nothing ever landed in the crosshair - while true means every
+   * draw call was issued and simply produced no visible pixels, which is the
+   * 26.x alpha-0 signature described on {@code Colors#opaqueIfNoAlpha}.
+   *
+   * <p>Deliberately set <em>after</em> the null-entity and {@code onlyWhenHurt}
+   * guards below, not at the render hook: the hook fires every frame whether
+   * or not there is anything to draw, so a flag set there would be true even
+   * with the HUD correctly suppressed and would answer nothing.
+   *
+   * <p>{@code volatile} because it is written on the render thread and read
+   * from the gametest thread.
+   */
+  private static volatile boolean rendered;
+
   private final EntityDisplay entityDisplay = new EntityDisplay();
   private final BarDisplay barDisplay = new BarDisplay();
   private LivingEntity entity;
   private Config config = new Config();
   private int age;
+
+  /** @see #rendered */
+  public static boolean hasRendered() {
+    return rendered;
+  }
+
+  /** @see #rendered */
+  public static void resetRendered() {
+    rendered = false;
+  }
 
   public Hud() {
     //? if <1.19 {
@@ -163,6 +196,8 @@ public class Hud extends Screen {
       return;
     }
 
+    rendered = true;
+
     AnchorPoint anchor = config.hud.anchorPoint;
     float hudWidth = 160;
     float hudHeight = 60;
@@ -198,7 +233,7 @@ public class Hud extends Screen {
 
     canvas.translate(44.0f, 0.0f, 0.0f);
     if (config.hud.showBar) {
-      barDisplay.draw(canvas, entity);
+      barDisplay.draw(canvas, entity, config.bar);
     }
 
     canvas.popPose();

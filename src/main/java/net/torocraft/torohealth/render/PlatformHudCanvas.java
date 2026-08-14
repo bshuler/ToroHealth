@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.resources.ResourceLocation;
 //?}
 import net.minecraft.world.entity.LivingEntity;
+import net.torocraft.torohealth.util.Colors;
 
 //? if <1.19 {
 /*import com.mojang.blaze3d.systems.RenderSystem;
@@ -109,18 +110,31 @@ public class PlatformHudCanvas implements HudCanvas {
     //?}
   }
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Every branch normalises the colour through
+   * {@link Colors#opaqueIfNoAlpha(int)} first. On the {@code >=26.1} branch
+   * that is load-bearing rather than defensive: 26.x deleted {@code Font}'s
+   * own alpha fixup, so any caller passing a bare {@code 0xRRGGBB} draws
+   * nothing at all there while drawing correctly everywhere else. Doing it
+   * for all three branches keeps them identical in behaviour and means a
+   * future caller cannot reintroduce the bug by passing a config colour
+   * straight through. See {@link Colors} for the {@code javap} evidence.
+   */
   @Override
   public void drawString(Font font, String text, int x, int y, int color, boolean dropShadow) {
+    int argb = Colors.opaqueIfNoAlpha(color);
     //? if <1.20 {
     /*if (dropShadow) {
-      GuiComponent.drawString(pose, font, text, x, y, color);
+      GuiComponent.drawString(pose, font, text, x, y, argb);
     } else {
-      font.draw(pose, text, x, y, color);
+      font.draw(pose, text, x, y, argb);
     }
     *///?} elif >=26.1 {
-    /*context.text(font, text, x, y, color, dropShadow);
+    /*context.text(font, text, x, y, argb, dropShadow);
     *///?} else {
-    context.drawString(font, text, x, y, color, dropShadow);
+    context.drawString(font, text, x, y, argb, dropShadow);
     //?}
   }
 
@@ -231,23 +245,51 @@ public class PlatformHudCanvas implements HudCanvas {
     /*// InventoryScreen.renderEntityInInventory is gone entirely in 26.2; the
     // only survivor is extractEntityInInventoryFollowsMouse(
     //   GuiGraphicsExtractor, int x1, int y1, int x2, int y2, int scale,
-    //   float mouseX, float mouseY, float partialTick, LivingEntity)
-    // (confirmed via javap - only parameter types are visible this way, not
-    // names/semantics). It is mouse-following only: there is no explicit
-    // fixed-rotation quaternion parameter like every prior era had, so
-    // yRotDegrees can no longer be applied directly. Best-effort, disclosed
-    // as not runtime-verified (a visual-only risk - wrong here does not
-    // affect compile success): treat (x, y) as the top-left corner of a
-    // scale-sized square bounding box, matching how every other era in this
-    // method already treats x/y/scale as a single point + size rather than
-    // an explicit box, and pass mouseX=0, mouseY=0 - the same "front-on icon
-    // view" rationale the 1.18.2 branch above already relies on for its own
-    // mouse floats - plus partialTick=0.
-    int ix = (int) x;
-    int iy = (int) y;
-    int iScale = (int) scale;
-    InventoryScreen.extractEntityInInventoryFollowsMouse(context, ix, iy, ix + iScale,
-        iy + iScale, iScale, 0.0f, 0.0f, 0.0f, entity);
+    //   float yOffset, float mouseX, float mouseY, LivingEntity).
+    //
+    // An earlier revision of this branch guessed at that signature from
+    // javap's parameter *types* alone (which is all javap -p shows), read the
+    // three trailing floats as (mouseX, mouseY, partialTick), and treated
+    // (x, y) as the top-left corner of a scale-sized square. It compiled, it
+    // shipped, and it rendered the portrait displaced and clipped - caught
+    // only when the Tier 3 client gametest put a real 26.2 frame on screen.
+    // Everything below is now read off the disassembled method body and
+    // vanilla's own call site rather than inferred:
+    //
+    //   centre = ((x1+x2)/2, (y1+y2)/2)
+    //   translation = (0, boundingBoxHeight/2 + yOffset, 0)
+    //   the same x1,y1,x2,y2 are also the scissor rectangle
+    //
+    // so the box is not a hint, it positions AND clips. Checked against
+    // vanilla's InventoryScreen: box (x+26, y+8)-(x+75, y+78), scale 30, a
+    // 1.8-tall player renders 54px, centre y+43, feet land at y+70 just
+    // inside the box bottom at y+78.
+    //
+    // Reproducing the other eras' contract - (x, y) is the feet anchor,
+    // horizontally centred - therefore means placing the box so its centre
+    // sits half the rendered height above y, and sizing it to the entity
+    // rather than to `scale` so the scissor never cuts the model. The bounding
+    // box is divided by the entity's own scale because the method does the
+    // same to the render state before applying the scale argument.
+    float entityScale = entity.getScale() == 0.0f ? 1.0f : entity.getScale();
+    float renderedHeight = entity.getBbHeight() / entityScale * scale;
+    float renderedWidth = entity.getBbWidth() / entityScale * scale;
+    float halfWidth = Math.max(renderedWidth, renderedHeight) / 2.0f + 1.0f;
+    int x1 = Math.round(x - halfWidth);
+    int x2 = Math.round(x + halfWidth);
+    int y1 = Math.round(y - renderedHeight - 1.0f);
+    int y2 = Math.round(y + 1.0f);
+    // mouseX/mouseY are fed to the method as `atan((centre - mouse) / 40) * 20`
+    // degrees of yaw and pitch, so passing 0 - as the earlier revision did -
+    // does not mean "no rotation", it means "look at the top-left corner of
+    // the screen" and tilts the portrait by however far away that happens to
+    // be. Passing the box centre makes both terms exactly zero, which is the
+    // front-on icon view the other eras build explicitly with a quaternion.
+    // yRotDegrees still cannot be honoured here: 26.2 exposes no fixed
+    // rotation parameter, and the pre-26 branches only ever used it for this
+    // same front-on portrait anyway.
+    InventoryScreen.extractEntityInInventoryFollowsMouse(context, x1, y1, x2, y2,
+        Math.round(scale), 0.0f, (x1 + x2) / 2.0f, (y1 + y2) / 2.0f, entity);
     *///?} elif >=1.21 {
     Quaternionf rotation = new Quaternionf()
         .rotationZ((float) Math.PI)

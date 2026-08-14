@@ -335,6 +335,12 @@ Folia n/a — client mod.
     `ColorJsonAdapter` alpha-masking bug found and fixed along the way.
 17. ✅ Folia verdict recorded (n/a — client mod); per-repo extras (GOTCHAs
     aa/bb/cc) applied — see "Phase 2: Test coverage" above.
+18. ✅ Tier 1 loaded-game tests (`fabric-loader-junit`) green on all five
+    Fabric cells — see "Tier 1" above.
+19. ✅ Tier 3 client gametest green on `1.21.4-fabric` and `26.2-fabric`,
+    negative-control verified, plus first CI for this repo. Two real defects
+    found by it and fixed: the 26.2 entity portrait rendering outside its
+    panel, and four dead friend/foe bar colour options — see "Tier 3" above.
 
 ## Parked commits — RESOLVED, landed and pushed
 
@@ -365,6 +371,11 @@ disregarded — their content is now in git history.
   parameter (resolved) — this was the original open problem and is
   resolved; kept here as a historical note since `CLAUDE.md` still
   documents the resulting design.
+- 26.2 entity-portrait placement: **resolved** — see "Real bug found and
+  fixed: 26.2 entity portrait rendered outside its panel" below. This was
+  the disclosed-unverified guess in `PlatformHudCanvas#renderEntity`'s
+  `>=26.1` branch, and Tier 3 is what turned it from a disclosure into a
+  finding.
 - Exact per-loader event class names are now confirmed by real compiles
   for every currently-active cell (1.18.2/1.19.4 Forge, 1.20.1 Forge,
   1.21.4 NeoForge) — see the newly-discovered 1.18.2-forge
@@ -509,3 +520,280 @@ exclusion list. Nothing here runs on a Forge or NeoForge cell. Those gaps are
 Tier 3 (Fabric client gametest under xvfb) and Tier 4 (NeoForge
 `testframework`, which is ModDevGradle-only and therefore blocked under
 Architectury Loom — documented, not implemented).
+
+## Tier 3: client gametest (added 2026-08-13)
+
+`src/gametest/java/net/torocraft/torohealth/gametest/ToroHealthClientGameTest.java`
+runs this mod inside a **real Minecraft client** — real window, real GL
+context, real render thread, real world, a real pig in the crosshair — and
+asserts against the pixels that actually reached the screen. It uses
+`fabric-client-gametest-api-v1` and Loom's generated `runClientGameTest`
+task.
+
+| Cell | API version | Status |
+|---|---|---|
+| `1.21.4-fabric` | 4.1.1 | ✅ green |
+| `26.2-fabric` | 6.0.0 | ✅ green |
+
+```bash
+./gradlew :26.2-fabric:runClientGameTest      # opens a real window on macOS
+```
+
+The other eight cells are out of scope and stay that way:
+`fabric-client-gametest-api-v1` first appears around fabric-api 0.106 /
+MC 1.21.2, so 1.20.1, 1.19.4 and 1.18.2 have no such API, and the Forge and
+NeoForge cells have no equivalent reachable from Architectury Loom (same
+root cause as Tier 4 — see below).
+
+### Why this tier exists
+
+Every class under `display/**` and `render/**` is on the JaCoCo exclusion
+list because it renders straight to a live GL primitive, and nothing in the
+headless suite or Tier 1 draws a frame. That is the exact blind spot a HUD
+mod can least afford: **a HUD that silently never draws still compiles,
+still packages, still loads, and still passes every other test in this
+repo.** Two real defects in this fork sat inside that blind spot, and this
+tier found the second one.
+
+### The one file compiles unbranched on both API versions
+
+Verified with `javap` against both extracted jars before a line was written,
+because the two versions are not identical:
+
+- `TestServerContext` — `runCommand`, `runOnServer`, `computeOnServer` in
+  both; 6.0.0 adds `waitFor`.
+- `ClientGameTestContext` — surface-identical between the two.
+- `TestSingleplayerContext` — **diverges**: `getClientWorld()` exists only in
+  4.1.1, replaced by `getConnection()` in 6.0.0. Neither is used here.
+
+`describeStaging` uses `var` rather than naming `LocalPlayer`/`Entity`,
+because both moved package in 26.x and an explicit import would need a
+Stonecutter branch for a diagnostic string.
+
+### `runCommand` swallows failures
+
+Bytecode-verified: `TestServerContextImpl.lambda$runCommand$0` calls
+`server.getCommands().performPrefixedCommand(server.createCommandSourceStack(),
+cmd)`, which **logs a failed command rather than throwing**. The source's
+position is the world spawn, not the player, so every position-relative
+command is wrapped in `execute as @p at @s run …`.
+
+The consequence is that a mis-staged world would otherwise report a clean,
+entirely meaningless zero — an empty screen compared against an empty
+screen. Hence `assertPigIsInTheCrosshair`, which runs before anything is
+measured and proved its worth immediately by failing twice, honestly, with
+the reason (below), instead of passing vacuously.
+
+**And it bit for real, on 26.2** (found 2026-08-14, while building the same
+tier in the sibling repo EasierVillagerTrading). All six `gamerule` commands
+in `WORLD_SETUP` came back `Incorrect argument for command` on the server
+console while this test reported BUILD SUCCESSFUL and its usual clean
+numbers. 26.2 renamed every game rule to snake_case and moved the registry
+from `net.minecraft.world.level.GameRules` to
+`net.minecraft.world.level.gamerules.GameRules`; three changed identity
+rather than spelling, and one changed type:
+
+| ≤1.21.4 | 26.2 |
+|---|---|
+| `sendCommandFeedback` | `send_command_feedback` |
+| `doDaylightCycle` | `advance_time` |
+| `doWeatherCycle` | `advance_weather` |
+| `doMobSpawning` | `spawn_mobs` |
+| `randomTickSpeed` | `random_tick_speed` |
+| `doFireTick` (boolean) | `fire_spread_radius_around_player` (**integer**, default 128, min −1; "off" is `0`) |
+
+Read off the real 26.2 jar's `GameRules.<clinit>`, where each id string is
+followed by the `putstatic` naming its field. Fixed behind a Stonecutter
+`//? if <26.2` split.
+
+Worth being precise about what this did and did not cost. Nothing measured
+here depended on those six: the noise floor was 0 px before the fix and 0 px
+after, and the HUD signal is **9076 px on 26.2 both before and after** —
+identical, because a 20-second test barely gives daylight or weather time to
+move. So this was not a wrong result. It was an unenforced control, silently
+unenforced, which is the failure mode that surfaces months later as a flake
+nobody can reproduce. The reason it is written up at this length is that the
+only thing that caught it was reading a passing run's server log.
+
+### Aiming: `teleport … facing entity` does not aim where the ray goes
+
+Two live-run failures, both real and both worth recording because the second
+is a genuine vanilla trap:
+
+1. Pig summoned at `^ ^ ^3`, i.e. feet in the ground plane. The crosshair ray
+   grazes the surface and `RayTrace#getEntityInCrosshair`'s block-occlusion
+   check has no honest answer when the block hit and the entity hit coincide.
+2. Aiming with `tp @s ~ ~ ~ facing entity <pig> eyes` — which reads like the
+   obvious fix and silently is not. Vanilla's teleport command **hardcodes
+   the self-anchor of its facing calculation to `FEET`** (the anchor argument
+   applies to the *target*, not the source), while the crosshair ray casts
+   from `getEyePosition`. Over three blocks that 1.62-block discrepancy tips
+   the aim about 30° skyward. Observed, not theorised: the failure reported
+   `pitch=-30.5` with the pig 3.16 m away and dead ahead.
+
+The staging now sidesteps the anchor question entirely: zero the pitch,
+summon at `^ ^1 ^3` so the pig's body spans 1.0–1.9 and the eye line at 1.62
+passes through its upper torso, and re-level to pitch zero. Because `^` is
+the player's own local frame, the pig also lands exactly on the yaw axis. A
+horizontal ray 1.62 above a flat world strikes no block at all, so the
+occlusion check takes its `MISS` branch and returns the entity outright —
+no near-tie for the test to rest on.
+
+### A pig, specifically
+
+`EntityUtil.determineRelation` maps any `Animal` to `FRIEND`, which routes
+the bar through `bar.friendColor`/`friendColorSecondary` — the exact pair
+this port had left dead and that the friend/foe restoration re-wired. The
+green bar in `0004_torohealth-hud-on.png` is that code path executing.
+
+### What the assertion actually measures
+
+Three screenshots at the same viewpoint: two with the HUD suppressed via the
+real `hud.onlyWhenHurt` config branch (a genuinely blank state produced by
+the mod's own guard, not by reaching into the renderer), one with it on. The
+first pair establishes an ambient noise floor; the HUD-on difference minus
+that floor is the signal. Measured on the top-left quadrant, counting pixels
+differing by more than 64 on any channel.
+
+Measured on `26.2-fabric`: **noise floor 0 px, HUD signal 9,076 px** over a
+427×240 quadrant, against a 300 px threshold — a ~30× margin. The margin is
+printed on success as well as failure, because a pass that clears by 3 px
+and a pass that clears by 9,000 are the same green tick in CI and are not
+the same result.
+
+Two symmetric guards keep the differential honest: `Hud.hasRendered()` must
+be **false** in the off state (a broken `onlyWhenHurt` guard would otherwise
+deflate the difference by exactly as much as it wrongly draws) and **true**
+in the on state (separating "the hook never fired" from "everything drew and
+produced no pixels", which is the 26.x alpha-0 signature).
+
+### Verified, not assumed
+
+- Both cells run green, `EXIT=0`.
+- **The screenshots were read by eye, not just counted.** This mattered — see
+  the honest limitation below.
+- **Negative control run, not just asserted.** `Hud.draw` was temporarily
+  edited to set `rendered = true` and then return immediately — the exact
+  "every draw call ran and produced no pixels" scenario this tier exists to
+  catch. `:26.2-fabric:runClientGameTest` then **failed**, `EXIT=1`, at
+  `HUD-on difference = 0 px`, and the message picked the correct one of its
+  two diagnoses: *"Every draw call ran (`Hud.hasRendered()` is true) into a
+  frame that does not show them."* Reverting restored `9076 px` — the
+  identical figure, so the two runs differ only by the sabotage. The
+  assertion has teeth; it is not a threshold that anything would clear.
+
+### Honest limitation: the threshold did not catch the portrait bug
+
+The 26.2 entity-portrait defect described below was present and **the pixel
+assertion passed anyway**, at 9,000-plus pixels, because the panel, text,
+heart and bar all still drew. The threshold answers "did the HUD draw
+anything", not "did the HUD draw correctly". The defect was caught by
+looking at `0004_torohealth-hud-on.png`.
+
+So: the automated assertion is a floor against total invisibility, and the
+uploaded screenshots are the real review surface. Anyone tightening this
+tier should reach for a layout assertion (portrait pixels inside the panel
+rectangle) rather than a larger pixel count, and should not read a green
+`runClientGameTest` as "the HUD is correct".
+
+### Real bug found and fixed: 26.2 entity portrait rendered outside its panel
+
+`InventoryScreen.renderEntityInInventory` is gone entirely in 26.2. The only
+survivor is `extractEntityInInventoryFollowsMouse`, and the port's `>=26.1`
+branch had guessed at its contract from `javap -p`'s parameter *types* alone
+— which is all `javap -p` shows — and disclosed the guess in a comment as
+"best-effort, not runtime-verified (a visual-only risk)". Tier 3 turned that
+disclosure into a finding: the portrait rendered displaced down-and-right
+and clipped, leaving the panel's box empty.
+
+Three separate errors, all now read off the disassembled method body and
+vanilla's own call site rather than inferred:
+
+| | Guessed | Actual |
+|---|---|---|
+| trailing floats | `(mouseX, mouseY, partialTick)` | `(yOffset, mouseX, mouseY)` |
+| `x1,y1,x2,y2` | a size hint; `(x,y)` as top-left of a `scale`-sized square | positions **and** scissor-clips; entity is centred at `((x1+x2)/2, (y1+y2)/2)` |
+| `mouseX=mouseY=0` | "front-on icon view" | fed through `atan((centre − mouse)/40)·20` degrees — 0 means *look at the screen's top-left corner*, tilting the portrait |
+
+Confirmed against vanilla's own call, `(x+26, y+8)-(x+75, y+78)` at scale
+30: a 1.8-tall player renders 54 px, box centre `y+43`, feet land at `y+70`,
+just inside the box bottom at `y+78`.
+
+The fix reproduces the other eras' contract — `(x, y)` is the feet anchor,
+horizontally centred — by placing the box centre half the rendered height
+above `y`, sizing it to the entity rather than to `scale` so the scissor
+never cuts the model, and passing the box centre as the mouse position so
+both rotation terms are exactly zero. The bounding box is divided by the
+entity's own scale because the method does the same to the render state
+before applying the scale argument.
+
+Remaining disclosed gap: `yRotDegrees` still cannot be honoured on 26.2,
+which exposes no fixed-rotation parameter. The pre-26 branches only ever
+used it for this same front-on portrait, so the visible difference is that
+the 26.2 portrait always faces front while 1.21.4's follows the entity's
+yaw.
+
+### Restored: friend/foe bar colours
+
+Found while building the Tier 3 staging (the test aims at a pig specifically
+so the friend branch executes), and it is a fork regression rather than a
+port-era API problem.
+
+Upstream drew the HUD bar and the in-world bar through one code path, in
+three stacked layers — dark background, a trailing "ghost" bar at the
+entity's *previous* displayed health, then current health — colouring them
+from four config options selected by `EntityUtil.determineRelation`:
+
+| Config option | Used for |
+|---|---|
+| `bar.friendColor` | current health, `Relation.FRIEND` |
+| `bar.friendColorSecondary` | ghost bar, `Relation.FRIEND` |
+| `bar.foeColor` | current health, `Relation.FOE` |
+| `bar.foeColorSecondary` | ghost bar, `Relation.FOE` |
+
+This fork's port split the two renderers and hardcoded a colour ramp into
+each — `BarDisplay` a green/yellow/red step at 50% and 25%,
+`HealthBarRenderer` a continuous red-to-green interpolation — and neither
+read the config. **All four options were dead.** They were still parsed,
+still written back to `config/torohealth.json`, still exposed on the config
+screen, and still had lang-file labels; setting any of them changed nothing
+on screen. The ghost bar was gone from both renderers as well, so the
+damage-flash the `BarStateMath` state machine exists to drive had no
+consumer in either bar — `previousHealthDisplay` was computed every tick and
+read by nobody.
+
+Both renderers now draw the three layers from those four options.
+`previousHealthDisplay` comes from `BarStates.getState(entity).math`, which
+is the same state machine already covered to 100% by the headless suite, so
+the restoration reuses tested logic rather than adding new arithmetic.
+
+One trap in the restoration, worth its own note because it would have been
+invisible: config colours arrive as `0xRRGGBB`, alpha byte zero, because
+`ColorJsonAdapter` masks alpha off on read so that `read(write(x))`
+round-trips. `fill` has honoured alpha on **every** Minecraft version — this
+is not the 26.x `Font.adjustColor` story, `fill` never had that fixup
+anywhere — so passing a config colour straight to `fill` draws nothing at
+all, on every cell. Hence `Colors.opaqueIfNoAlpha` at the two call sites and
+`Colors.alpha` on the vertex path. Restoring dead config options by way of
+making the bar invisible everywhere would have been a strictly worse
+outcome than leaving them dead, and only the Tier 3 pixel differential would
+have caught it.
+
+The green bar in the Tier 3 screenshot `0004_torohealth-hud-on.png` is
+`friendColor` executing.
+
+### CI
+
+`.github/workflows/build.yml` — **this repo had no CI at all before this**,
+not a stale pipeline, none. Two jobs: the ten-cell `chiseledBuild` (unit
+suite + Tier 1 loaded tests + the 100% JaCoCo gate), and a `client-gametest`
+matrix over `1.21.4-fabric` and `26.2-fabric` running under
+`xvfb-run` with `LIBGL_ALWAYS_SOFTWARE=true`, uploading screenshots and logs
+`if: always()` — the failing run's screenshots being the more useful ones.
+
+### Tier 4 remains blocked
+
+NeoForge's `testframework` is reachable only from ModDevGradle, not from
+Architectury Loom, which is what Stonecraft uses here. Documented, not
+implemented — the same root cause that keeps Tier 1 off the five
+Forge/NeoForge cells.

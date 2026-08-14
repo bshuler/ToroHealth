@@ -299,15 +299,15 @@ public class ConfigScreen extends Screen {
         int col2 = this.width / 2;
         int col3 = this.width - this.width / 6;
 
-        GuiComponent.drawString(poseStack, this.font, "Distance:", col1 - 55, 30, 0xFFFFFF);
-        GuiComponent.drawString(poseStack, this.font, "X Pos:", col1 - 55, 48, 0xFFFFFF);
-        GuiComponent.drawString(poseStack, this.font, "Y Pos:", col1 - 55, 66, 0xFFFFFF);
-        GuiComponent.drawString(poseStack, this.font, "Scale:", col1 - 55, 84, 0xFFFFFF);
-        GuiComponent.drawString(poseStack, this.font, "Delay:", col1 - 55, 102, 0xFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Distance:", col1 - 55, 30, 0xFFFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "X Pos:", col1 - 55, 48, 0xFFFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Y Pos:", col1 - 55, 66, 0xFFFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Scale:", col1 - 55, 84, 0xFFFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Delay:", col1 - 55, 102, 0xFFFFFFFF);
 
-        GuiComponent.drawString(poseStack, this.font, "Distance:", col2 - 55, 120, 0xFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Distance:", col2 - 55, 120, 0xFFFFFFFF);
 
-        GuiComponent.drawString(poseStack, this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
+        GuiComponent.drawString(poseStack, this.font, "Distance:", col3 - 55, 43, 0xFFFFFFFF);
     }
     *///?} elif >=26.1 {
     /*// Screen.render(GuiGraphics, ...) was renamed/restructured into
@@ -323,15 +323,15 @@ public class ConfigScreen extends Screen {
         int col2 = this.width / 2;
         int col3 = this.width - this.width / 6;
 
-        guiGraphics.text(this.font, "Distance:", col1 - 55, 30, 0xFFFFFF);
-        guiGraphics.text(this.font, "X Pos:", col1 - 55, 48, 0xFFFFFF);
-        guiGraphics.text(this.font, "Y Pos:", col1 - 55, 66, 0xFFFFFF);
-        guiGraphics.text(this.font, "Scale:", col1 - 55, 84, 0xFFFFFF);
-        guiGraphics.text(this.font, "Delay:", col1 - 55, 102, 0xFFFFFF);
+        guiGraphics.text(this.font, "Distance:", col1 - 55, 30, 0xFFFFFFFF);
+        guiGraphics.text(this.font, "X Pos:", col1 - 55, 48, 0xFFFFFFFF);
+        guiGraphics.text(this.font, "Y Pos:", col1 - 55, 66, 0xFFFFFFFF);
+        guiGraphics.text(this.font, "Scale:", col1 - 55, 84, 0xFFFFFFFF);
+        guiGraphics.text(this.font, "Delay:", col1 - 55, 102, 0xFFFFFFFF);
 
-        guiGraphics.text(this.font, "Distance:", col2 - 55, 120, 0xFFFFFF);
+        guiGraphics.text(this.font, "Distance:", col2 - 55, 120, 0xFFFFFFFF);
 
-        guiGraphics.text(this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
+        guiGraphics.text(this.font, "Distance:", col3 - 55, 43, 0xFFFFFFFF);
     }
     *///?} else {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
@@ -341,15 +341,15 @@ public class ConfigScreen extends Screen {
         int col2 = this.width / 2;
         int col3 = this.width - this.width / 6;
 
-        guiGraphics.drawString(this.font, "Distance:", col1 - 55, 30, 0xFFFFFF);
-        guiGraphics.drawString(this.font, "X Pos:", col1 - 55, 48, 0xFFFFFF);
-        guiGraphics.drawString(this.font, "Y Pos:", col1 - 55, 66, 0xFFFFFF);
-        guiGraphics.drawString(this.font, "Scale:", col1 - 55, 84, 0xFFFFFF);
-        guiGraphics.drawString(this.font, "Delay:", col1 - 55, 102, 0xFFFFFF);
+        guiGraphics.drawString(this.font, "Distance:", col1 - 55, 30, 0xFFFFFFFF);
+        guiGraphics.drawString(this.font, "X Pos:", col1 - 55, 48, 0xFFFFFFFF);
+        guiGraphics.drawString(this.font, "Y Pos:", col1 - 55, 66, 0xFFFFFFFF);
+        guiGraphics.drawString(this.font, "Scale:", col1 - 55, 84, 0xFFFFFFFF);
+        guiGraphics.drawString(this.font, "Delay:", col1 - 55, 102, 0xFFFFFFFF);
 
-        guiGraphics.drawString(this.font, "Distance:", col2 - 55, 120, 0xFFFFFF);
+        guiGraphics.drawString(this.font, "Distance:", col2 - 55, 120, 0xFFFFFFFF);
 
-        guiGraphics.drawString(this.font, "Distance:", col3 - 55, 43, 0xFFFFFF);
+        guiGraphics.drawString(this.font, "Distance:", col3 - 55, 43, 0xFFFFFFFF);
     }
     //?}
 

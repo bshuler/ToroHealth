@@ -316,6 +316,55 @@ anything on a NeoForge or Forge cell. Those are Tier 3 (Fabric client
 gametest under xvfb) and Tier 4 (NeoForge `testframework`, blocked under
 Loom) respectively.
 
+### Client gametest (Tier 3)
+
+`src/gametest/java/.../gametest/ToroHealthClientGameTest.java` runs the mod
+in a **real Minecraft client** — real window, real GL context, real world,
+a real pig in the crosshair — and asserts on the pixels that reached the
+screen. `fabric-client-gametest-api-v1` via Loom's generated task:
+
+```bash
+unset JAVA_HOME && ./gradlew :26.2-fabric:runClientGameTest   # opens a real window
+unset JAVA_HOME && ./gradlew :1.21.4-fabric:runClientGameTest
+```
+
+Those two cells only. The API first appears around MC 1.21.2, so the three
+older Fabric cells cannot run it, and the Forge/NeoForge cells have no
+equivalent reachable from Architectury Loom.
+
+This tier is the *only* coverage of `display/**` and `render/**`, which are
+on the JaCoCo exclusion list precisely because they draw to a live GL
+primitive. It has already paid for itself twice — the 26.2 entity-portrait
+placement bug and four dead friend/foe colour options, both shipped, both
+invisible to every other tier. `PLAN.md` § "Tier 3" has the full write-up.
+
+Four things to know before touching it:
+
+- **`runCommand` swallows failures** (bytecode-verified) and its source
+  position is the world spawn, not the player. Wrap every position-relative
+  command in `execute as @p at @s run …`, and never assume a command took.
+  `assertPigIsInTheCrosshair` runs before any measurement for this reason:
+  otherwise a mis-staged world compares one empty screen against another and
+  reports a confident, meaningless zero.
+- **Do not aim with `teleport … facing entity`.** Vanilla hardcodes the
+  *self*-anchor of that calculation to `FEET` while the crosshair ray casts
+  from the eyes — a 1.62-block offset that tips the aim ~30° skyward over
+  three blocks. Observed here, not theorised. The staging levels the pitch
+  and floats the pig at `^ ^1 ^3` so its body straddles the eye line.
+- **The assertion is a floor, not a correctness check.** It answers "did the
+  HUD draw anything" (measured margin: 9,076 px against a 300 px threshold),
+  and it passed with the portrait bug present. The uploaded screenshots are
+  the real review surface — read them, don't just read the exit code.
+- **One file, both API versions, no Stonecutter branch.** 4.1.1 and 6.0.0
+  diverge on `TestSingleplayerContext` (`getClientWorld()` vs
+  `getConnection()`); neither is used. `describeStaging` uses `var` rather
+  than naming `LocalPlayer`/`Entity`, which both moved package in 26.x.
+
+CI is `.github/workflows/build.yml` — **new; this repo had no CI at all
+before.** The ten-cell `chiseledBuild`, plus a `client-gametest` matrix over
+the two cells under `xvfb-run` with `LIBGL_ALWAYS_SOFTWARE=true`, uploading
+screenshots and logs `if: always()`.
+
 ## Version matrix (target)
 
 Newest stable Minecraft per `https://meta.fabricmc.net/v2/versions/game`
@@ -371,14 +420,28 @@ should already be fixed. If a build result doesn't match what the current
 This is cheap enough to run before every cell's build as a matter of
 course when iterating on shared (non-cell-specific) source files.
 
-Only JDK available in this environment is **Temurin 21**
-(`/Library/Java/JavaVirtualMachines/temurin-21.jdk`). Older MC versions need
-older Java at *runtime* (1.18.2/1.19.4 → Java 17) but Loom/ForgeGradle
-toolchains handle that via Gradle's Java toolchain auto-provisioning
-(foojay-resolver, downloads into `~/.gradle/jdks`) — never install a system
-JDK, never touch Homebrew for this. Gradle 9.x needs
-`foojay-resolver-convention` **1.0.0** specifically (0.8.0 throws on
-`JvmVendorSpec.IBM_SEMERU`).
+### JDK: run Gradle with `JAVA_HOME` **unset**
+
+```bash
+unset JAVA_HOME && ./gradlew <task>
+```
+
+The only JDK *installed* in this environment is **Temurin 21**
+(`/Library/Java/JavaVirtualMachines/temurin-21.jdk`), and an earlier revision
+of this document stopped there — which is wrong in a way that costs a red
+build. This matrix spans Java 17 (1.18.2/1.19.4 at runtime) through **Java 25**
+(26.x), and no single installed JDK covers it. Gradle's toolchain
+auto-provisioning does, via the foojay resolver declared in
+`settings.gradle.kts`, downloading each into `~/.gradle/jdks/`.
+
+Exporting `JAVA_HOME=.../temurin-21` pins Gradle's own daemon to 21 and the
+26.x cells then fail rather than provisioning 25. So: **mod repos unset it,
+plugin repos (Paper/Spigot, all Java 21) export it.** Never install a system
+JDK and never touch Homebrew to resolve a toolchain error — the resolver is
+the mechanism, and a hand-installed JDK just hides which cell was misconfigured.
+
+Gradle 9.x needs `foojay-resolver-convention` **1.0.0** specifically (0.8.0
+throws on `JvmVendorSpec.IBM_SEMERU`).
 
 ## Porting notes for whoever (human or AI) continues this
 
