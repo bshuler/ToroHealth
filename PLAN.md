@@ -196,7 +196,7 @@ lifecycle/rendering events have been stable since well before 1.18).
 
 ## Phase 2: Test coverage
 
-Bert's directive: 100% test coverage, enforced (not aspirational). JUnit 5 +
+Human's directive: 100% test coverage, enforced (not aspirational). JUnit 5 +
 JaCoCo wired into `build.gradle.kts` mirroring the canonical pattern from
 `critical-orientation`/`FlightHud`/`critical-flight-details`/
 `EasierVillagerTrading`/`simple-utilities-mod`: `jacoco` plugin,
