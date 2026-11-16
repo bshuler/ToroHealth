@@ -1,7 +1,7 @@
 package net.torocraft.torohealth.render;
 
 import net.minecraft.client.gui.Font;
-//? if >=26.1 {
+//? if >=1.21.11 {
 /*import net.minecraft.resources.Identifier;
 *///?} else {
 import net.minecraft.resources.ResourceLocation;
@@ -41,7 +41,7 @@ public interface HudCanvas {
    * that pre-1.20 needs the texture bound separately first — see
    * {@link PlatformHudCanvas} for how each era resolves that.
    */
-  //? if >=26.1 {
+  //? if >=1.21.11 {
   /*void blitBackground(Identifier texture, int x, int y, float u, float v, int width,
       int height, int texWidth, int texHeight);
   *///?} else {

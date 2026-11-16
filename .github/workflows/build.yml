@@ -37,8 +37,8 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # chiseledBuild builds all ten cells AND runs each cell's `check`: the
-      # unit suite, the Tier 1 loaded-game test on the five Fabric cells, and
+      # chiseledBuild builds all 38 cells AND runs each cell's `check`: the
+      # unit suite, the Tier 1 loaded-game test on the 19 Fabric cells, and
       # the JaCoCo 100% line-coverage gate.
       - name: Build all versions and loaders
         run: ./gradlew chiseledBuild
@@ -75,7 +75,11 @@ jobs:
         # MC 1.21.2) - see build.gradle.kts, `clientGameTestSupported`. The
         # NeoForge and Forge cells have no equivalent reachable from
         # Architectury Loom.
-        cell: ['1.21.4-fabric', '26.2-fabric']
+        cell: [
+          '1.21.4-fabric', '1.21.5-fabric', '1.21.6-fabric', '1.21.7-fabric',
+          '1.21.8-fabric', '1.21.9-fabric', '1.21.10-fabric', '1.21.11-fabric',
+          '26.1-fabric', '26.1.1-fabric', '26.1.2-fabric', '26.2-fabric', '26.3-fabric'
+        ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

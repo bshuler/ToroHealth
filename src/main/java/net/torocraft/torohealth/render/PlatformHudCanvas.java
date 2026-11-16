@@ -1,7 +1,7 @@
 package net.torocraft.torohealth.render;
 
 import net.minecraft.client.gui.Font;
-//? if >=26.1 {
+//? if >=1.21.11 {
 /*import net.minecraft.resources.Identifier;
 *///?} else {
 import net.minecraft.resources.ResourceLocation;
@@ -24,13 +24,24 @@ import org.joml.Quaternionf;
 /*import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.RenderPipelines;
-*///?} elif >=1.21 {
+*///?} elif >=1.21.6 {
+/*import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.renderer.RenderPipelines;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+*///?} elif >=1.21.2 {
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.RenderType;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-//?} else {
+//?} elif >=1.20.2 {
+/*import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+*///?} else {
 /*import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import org.joml.Quaternionf;
@@ -142,13 +153,8 @@ public class PlatformHudCanvas implements HudCanvas {
   public void pushPose() {
     //? if <1.20 {
     /*pose.pushPose();
-    *///?} elif >=26.1 {
-    /*// Matrix3x2fStack (26.2's replacement for PoseStack in the GUI pipeline)
-    // uses pushMatrix()/popMatrix() naming instead of pushPose()/popPose(),
-    // confirmed via javap and mirrored from the sibling mod FlightHud's
-    // PlatformCanvas, which already proves this exact shape against a real
-    // 26.1+ build.
-    context.pose().pushMatrix();
+    *///?} elif >=1.21.6 {
+    /*context.pose().pushMatrix();
     *///?} else {
     context.pose().pushPose();
     //?}
@@ -158,7 +164,7 @@ public class PlatformHudCanvas implements HudCanvas {
   public void popPose() {
     //? if <1.20 {
     /*pose.popPose();
-    *///?} elif >=26.1 {
+    *///?} elif >=1.21.6 {
     /*context.pose().popMatrix();
     *///?} else {
     context.pose().popPose();
@@ -169,11 +175,8 @@ public class PlatformHudCanvas implements HudCanvas {
   public void translate(float x, float y, float z) {
     //? if <1.20 {
     /*pose.translate(x, y, z);
-    *///?} elif >=26.1 {
-    /*// Matrix3x2fStack is a 2D affine matrix - translate(x, y) has no z
-    // parameter. Every HudCanvas call site in this project passes z=0.0f
-    // for GUI drawing, so dropping it here is safe.
-    context.pose().translate(x, y);
+    *///?} elif >=1.21.6 {
+    /*context.pose().translate(x, y);
     *///?} else {
     context.pose().translate(x, y, z);
     //?}
@@ -183,7 +186,7 @@ public class PlatformHudCanvas implements HudCanvas {
   public void scale(float x, float y, float z) {
     //? if <1.20 {
     /*pose.scale(x, y, z);
-    *///?} elif >=26.1 {
+    *///?} elif >=1.21.6 {
     /*context.pose().scale(x, y);
     *///?} else {
     context.pose().scale(x, y, z);
@@ -200,17 +203,21 @@ public class PlatformHudCanvas implements HudCanvas {
     RenderSystem.setShaderTexture(0, texture);
     GuiComponent.blit(pose, x, y, u, v, width, height, texWidth, texHeight);
   }
-  *///?} elif >=26.1 {
+  *///?} elif >=1.21.11 {
   /*@Override
   public void blitBackground(Identifier texture, int x, int y, float u, float v, int width,
       int height, int texWidth, int texHeight) {
-    // RenderType::guiTextured (the old blit's pipeline-supplier argument)
-    // was removed; RenderPipelines.GUI_TEXTURED (confirmed via javap) is
-    // the direct replacement RenderPipeline constant.
     context.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, texWidth,
         texHeight);
   }
-  *///?} elif >=1.21 {
+  *///?} elif >=1.21.6 {
+  /*@Override
+  public void blitBackground(ResourceLocation texture, int x, int y, float u, float v, int width,
+      int height, int texWidth, int texHeight) {
+    context.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, texWidth,
+        texHeight);
+  }
+  *///?} elif >=1.21.2 {
   @Override
   public void blitBackground(ResourceLocation texture, int x, int y, float u, float v, int width,
       int height, int texWidth, int texHeight) {
@@ -290,11 +297,36 @@ public class PlatformHudCanvas implements HudCanvas {
     // same front-on portrait anyway.
     InventoryScreen.extractEntityInInventoryFollowsMouse(context, x1, y1, x2, y2,
         Math.round(scale), 0.0f, (x1 + x2) / 2.0f, (y1 + y2) / 2.0f, entity);
-    *///?} elif >=1.21 {
+    *///?} elif >=1.21.11 {
+    /*float entityScale = entity.getScale() == 0.0f ? 1.0f : entity.getScale();
+    float renderedHeight = entity.getBbHeight() / entityScale * scale;
+    float renderedWidth = entity.getBbWidth() / entityScale * scale;
+    float halfWidth = Math.max(renderedWidth, renderedHeight) / 2.0f + 1.0f;
+    int x1 = Math.round(x - halfWidth);
+    int x2 = Math.round(x + halfWidth);
+    int y1 = Math.round(y - renderedHeight - 1.0f);
+    int y2 = Math.round(y + 1.0f);
+    InventoryScreen.renderEntityInInventoryFollowsMouse(context, x1, y1, x2, y2,
+        Math.round(scale), 0.0f, (x1 + x2) / 2.0f, (y1 + y2) / 2.0f, entity);
+    *///?} elif >=1.21.6 {
+    /*float entityScale = entity.getScale() == 0.0f ? 1.0f : entity.getScale();
+    float renderedHeight = entity.getBbHeight() / entityScale * scale;
+    float renderedWidth = entity.getBbWidth() / entityScale * scale;
+    float halfWidth = Math.max(renderedWidth, renderedHeight) / 2.0f + 1.0f;
+    int x1 = Math.round(x - halfWidth);
+    int x2 = Math.round(x + halfWidth);
+    int y1 = Math.round(y - renderedHeight - 1.0f);
+    int y2 = Math.round(y + 1.0f);
     Quaternionf rotation = new Quaternionf()
         .rotationZ((float) Math.PI)
         .rotateY(yRotDegrees * ((float) Math.PI / 180.0f));
-    InventoryScreen.renderEntityInInventory(context, x, y, scale,
+    InventoryScreen.renderEntityInInventory(context, x1, y1, x2, y2, scale,
+        new Vector3f(0.0F, 0.0F, 0.0F), rotation, null, entity);
+    *///?} elif >=1.20.2 {
+    Quaternionf rotation = new Quaternionf()
+        .rotationZ((float) Math.PI)
+        .rotateY(yRotDegrees * ((float) Math.PI / 180.0f));
+    InventoryScreen.renderEntityInInventory(context, x, y, (int) scale,
         new Vector3f(0.0F, 0.0F, 0.0F), rotation, null, entity);
     //?} else {
     /*Quaternionf rotation = new Quaternionf()

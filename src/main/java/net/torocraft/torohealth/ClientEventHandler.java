@@ -15,6 +15,19 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+*///?} elif fabric && >=1.21.10 {
+/*import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphics;
+*///?} elif fabric && >=1.21.9 {
+/*import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphics;
 *///?} elif fabric {
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -30,7 +43,17 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-*///?} elif neoforge {
+*///?} elif neoforge && >=1.21.9 {
+/*import net.minecraft.client.Camera;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphics;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+*///?} elif neoforge && >=1.21 {
 /*import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 import net.neoforged.api.distmarker.Dist;
@@ -39,6 +62,14 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+*///?} elif neoforge {
+/*import net.minecraft.client.gui.GuiGraphics;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 *///?} elif forge && <1.19 {
 /*// 1.18.2: the GUI overlay event is still RenderGameOverlayEvent (renamed
@@ -89,20 +120,8 @@ import net.minecraftforge.fml.common.Mod;
  */
 public class ClientEventHandler {
 
-  //? if fabric && >=26.1 {
-  /*// 26.2's Fabric API replaced HudRenderCallback/WorldRenderEvents.
-  // AFTER_TRANSLUCENT with HudElementRegistry (HudElement.extractRenderState
-  // takes GuiGraphicsExtractor+DeltaTracker, matching Hud's own >=26.1
-  // draw(...) overload) and LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES
-  // (LevelRenderContext exposes poseStack()+submitNodeCollector() but, like
-  // every other 26.1+ world-render hook confirmed via javap this port, no
-  // Camera accessor - fetched separately via
-  // Minecraft.getInstance().gameRenderer.mainCamera()). ClientTickEvents is
-  // unchanged. Neither HealthBarRenderer.renderInWorld's partialTick
-  // parameter nor ParticleRenderer.renderParticles use partial-tick
-  // interpolation in their >=26.1 bodies, so 0.0f is passed rather than
-  // threading a DeltaTracker through just to satisfy the parameter.
-  public static void register() {
+  //? if fabric && >=26.2 {
+  /*public static void register() {
     HudElementRegistry.addLast(ToroHealth.id("hud"), ClientEventHandler::onHudRender);
     LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(
         ClientEventHandler::onWorldRenderAfterTranslucentFeatures);
@@ -125,6 +144,67 @@ public class ClientEventHandler {
   private static void onClientTick(Minecraft client) {
     clientTick(client);
   }
+  *///?} elif fabric && >=26.1 {
+  /*public static void register() {
+    HudElementRegistry.addLast(ToroHealth.id("hud"), ClientEventHandler::onHudRender);
+    LevelRenderEvents.AFTER_TRANSLUCENT_FEATURES.register(
+        ClientEventHandler::onWorldRenderAfterTranslucentFeatures);
+    ClientTickEvents.END_CLIENT_TICK.register(ClientEventHandler::onClientTick);
+  }
+
+  private static void onHudRender(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
+    Minecraft client = Minecraft.getInstance();
+    ToroHealth.HUD.draw(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(false),
+        client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+  }
+
+  private static void onWorldRenderAfterTranslucentFeatures(LevelRenderContext context) {
+    Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+    HealthBarRenderer.renderInWorld(0.0f, context.poseStack(), camera,
+        context.submitNodeCollector());
+    ParticleRenderer.renderParticles(context.poseStack(), camera, context.submitNodeCollector());
+  }
+
+  private static void onClientTick(Minecraft client) {
+    clientTick(client);
+  }
+  *///?} elif fabric && >=1.21.10 {
+  /*public static void register() {
+    HudRenderCallback.EVENT.register(ClientEventHandler::onHudRender);
+    WorldRenderEvents.END_MAIN.register(ClientEventHandler::onWorldRender);
+    ClientTickEvents.END_CLIENT_TICK.register(ClientEventHandler::onClientTick);
+  }
+
+  private static void onHudRender(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+    Minecraft client = Minecraft.getInstance();
+    ToroHealth.HUD.draw(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(false),
+        client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+  }
+
+  private static void onWorldRender(WorldRenderContext context) {
+    Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+    HealthBarRenderer.renderInWorld(0.0f, context.matrices(), camera);
+    ParticleRenderer.renderParticles(context.matrices(), camera);
+  }
+
+  private static void onClientTick(Minecraft client) {
+    clientTick(client);
+  }
+  *///?} elif fabric && >=1.21.9 {
+  /*public static void register() {
+    HudRenderCallback.EVENT.register(ClientEventHandler::onHudRender);
+    ClientTickEvents.END_CLIENT_TICK.register(ClientEventHandler::onClientTick);
+  }
+
+  private static void onHudRender(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+    Minecraft client = Minecraft.getInstance();
+    ToroHealth.HUD.draw(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(false),
+        client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+  }
+
+  private static void onClientTick(Minecraft client) {
+    clientTick(client);
+  }
   *///?} elif fabric {
   public static void register() {
     HudRenderCallback.EVENT.register(ClientEventHandler::onHudRender);
@@ -138,7 +218,7 @@ public class ClientEventHandler {
     ToroHealth.HUD.draw(poseStack, tickDelta,
         client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
   }
-  *///?} elif >=1.21.2 {
+  *///?} elif >=1.21 {
   private static void onHudRender(net.minecraft.client.gui.GuiGraphics guiGraphics,
       net.minecraft.client.DeltaTracker deltaTracker) {
     Minecraft client = Minecraft.getInstance();
@@ -155,7 +235,7 @@ public class ClientEventHandler {
   *///?}
 
   private static void onWorldRenderAfterTranslucent(WorldRenderContext context) {
-    //? if >=1.21.2 {
+    //? if >=1.21 {
     HealthBarRenderer.renderInWorld(context.tickCounter().getGameTimeDeltaPartialTick(false),
         context.matrixStack(), context.camera());
     //?} else {
@@ -167,17 +247,8 @@ public class ClientEventHandler {
   private static void onClientTick(Minecraft client) {
     clientTick(client);
   }
-  //?} elif neoforge && >=26.1 {
-  /*// RenderLevelStageEvent was restructured in 26.2 (confirmed via javap
-  // against the real neoforge-26.2.0.58 jar): it dropped its Stage enum +
-  // getStage() entirely in favor of one concrete subclass per stage, and -
-  // critically - NONE of those subclasses expose a SubmitNodeCollector
-  // anymore. SubmitCustomGeometryEvent is the only NeoForge 26.2 event that
-  // still exposes one, so it replaces RenderLevelStageEvent.AFTER_PARTICLES
-  // for this mod's world-render hook. RegisterGuiLayersEvent/GuiLayer are
-  // structurally unchanged apart from GuiGraphics -> GuiGraphicsExtractor
-  // (also confirmed via javap).
-  @EventBusSubscriber(modid = ToroHealth.MODID, value = Dist.CLIENT)
+  //?} elif neoforge && >=26.2 {
+  /*@EventBusSubscriber(modid = ToroHealth.MODID, value = Dist.CLIENT)
   public static class Fml {
 
     @SubscribeEvent
@@ -207,7 +278,98 @@ public class ClientEventHandler {
     ToroHealth.HUD.draw(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(false),
         client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
   }
-  *///?} elif neoforge {
+  *///?} elif neoforge && >=26.1 {
+  /*@EventBusSubscriber(modid = ToroHealth.MODID, value = Dist.CLIENT)
+  public static class Fml {
+
+    @SubscribeEvent
+    public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+      event.registerAboveAll(ToroHealth.id("hud"), ClientEventHandler::renderGuiLayer);
+    }
+
+    @SubscribeEvent
+    public static void onSubmitCustomGeometry(SubmitCustomGeometryEvent event) {
+      Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+      HealthBarRenderer.renderInWorld(0.0f, event.getPoseStack(), camera,
+          event.getSubmitNodeCollector());
+      ParticleRenderer.renderParticles(event.getPoseStack(), camera, event.getSubmitNodeCollector());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTickPre(PlayerTickEvent.Pre event) {
+      Minecraft client = Minecraft.getInstance();
+      if (client.player == event.getEntity()) {
+        clientTick(client);
+      }
+    }
+  }
+
+  private static void renderGuiLayer(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
+    Minecraft client = Minecraft.getInstance();
+    ToroHealth.HUD.draw(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(false),
+        client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+  }
+  *///?} elif neoforge && >=1.21.9 {
+  /*@EventBusSubscriber(modid = ToroHealth.MODID, value = Dist.CLIENT)
+  public static class Fml {
+
+    @SubscribeEvent
+    public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+      event.registerAboveAll(ToroHealth.id("hud"), ClientEventHandler::renderGuiLayer);
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevelStage(RenderLevelStageEvent.AfterParticles event) {
+      Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+      HealthBarRenderer.renderInWorld(0.0f, event.getPoseStack(), camera);
+      ParticleRenderer.renderParticles(event.getPoseStack(), camera);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTickPre(PlayerTickEvent.Pre event) {
+      Minecraft client = Minecraft.getInstance();
+      if (client.player == event.getEntity()) {
+        clientTick(client);
+      }
+    }
+  }
+
+  private static void renderGuiLayer(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+    Minecraft client = Minecraft.getInstance();
+    ToroHealth.HUD.draw(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(false),
+        client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+  }
+  *///?} elif neoforge && >=1.21.6 {
+  /*@EventBusSubscriber(modid = ToroHealth.MODID, value = Dist.CLIENT)
+  public static class Fml {
+
+    @SubscribeEvent
+    public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+      event.registerAboveAll(ToroHealth.id("hud"), ClientEventHandler::renderGuiLayer);
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevelStage(RenderLevelStageEvent.AfterParticles event) {
+      HealthBarRenderer.renderInWorld(event.getPartialTick().getGameTimeDeltaPartialTick(false),
+          event.getPoseStack(), event.getCamera());
+      ParticleRenderer.renderParticles(event.getPoseStack(), event.getCamera());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTickPre(PlayerTickEvent.Pre event) {
+      Minecraft client = Minecraft.getInstance();
+      if (client.player == event.getEntity()) {
+        clientTick(client);
+      }
+    }
+  }
+
+  private static void renderGuiLayer(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+    Minecraft client = Minecraft.getInstance();
+    ToroHealth.HUD.draw(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(false),
+        client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+  }
+  *///?} elif neoforge && >=1.21 {
   /*@EventBusSubscriber(modid = ToroHealth.MODID, value = Dist.CLIENT)
   public static class Fml {
 
@@ -238,6 +400,39 @@ public class ClientEventHandler {
   private static void renderGuiLayer(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
     Minecraft client = Minecraft.getInstance();
     ToroHealth.HUD.draw(guiGraphics, deltaTracker.getGameTimeDeltaPartialTick(false),
+        client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
+  }
+  *///?} elif neoforge {
+  /*@EventBusSubscriber(modid = ToroHealth.MODID, value = Dist.CLIENT)
+  public static class Fml {
+
+    @SubscribeEvent
+    public static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+      event.registerAboveAll(ToroHealth.id("hud"), ClientEventHandler::renderGuiLayer);
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevelStage(RenderLevelStageEvent event) {
+      if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+        return;
+      }
+      HealthBarRenderer.renderInWorld(event.getPartialTick(),
+          event.getPoseStack(), event.getCamera());
+      ParticleRenderer.renderParticles(event.getPoseStack(), event.getCamera());
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTickPre(PlayerTickEvent.Pre event) {
+      Minecraft client = Minecraft.getInstance();
+      if (client.player == event.getEntity()) {
+        clientTick(client);
+      }
+    }
+  }
+
+  private static void renderGuiLayer(GuiGraphics guiGraphics, float partialTick) {
+    Minecraft client = Minecraft.getInstance();
+    ToroHealth.HUD.draw(guiGraphics, partialTick,
         client.getWindow().getGuiScaledWidth(), client.getWindow().getGuiScaledHeight());
   }
   *///?} elif forge && <1.19 {

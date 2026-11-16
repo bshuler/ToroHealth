@@ -29,23 +29,29 @@ recorded below — never silently dropped from the matrix.
 
 | MC version | Fabric | Forge | NeoForge |
 |---|---|---|---|
-| 26.2 (newest stable) | ✅ | — | ✅ |
+| 26.3 (newest stable) | ✅ | — | ✅ |
+| 26.2 | ✅ | — | ✅ |
+| 26.1.2 | ✅ | — | ✅ |
+| 26.1.1 | ✅ | — | ✅ |
+| 26.1 | ✅ | — | ✅ |
+| 1.21.11 | ✅ | — | ✅ |
+| 1.21.10 | ✅ | — | ✅ |
+| 1.21.9 | ✅ | — | ✅ |
+| 1.21.8 | ✅ | — | ✅ |
+| 1.21.7 | ✅ | — | ✅ |
+| 1.21.6 | ✅ | — | ✅ |
+| 1.21.5 | ✅ | — | ✅ |
 | 1.21.4 | ✅ | — | ✅ |
+| 1.21.1 | ✅ | — | ✅ |
+| 1.20.6 | ✅ | — | ✅ |
+| 1.20.4 | ✅ | ✅ | — |
 | 1.20.1 | ✅ | ✅ | — |
 | 1.19.4 | ✅ | ✅ | — |
 | 1.18.2 | ✅ | ✅ | — |
 
-10/10 target cells build green, each spot-checked via
-`unzip -l <jar> | grep -c "\.class$"` / `grep "net/torocraft"` to confirm
-real mod classes are present (31-42 classes per jar depending on cell), not
-just a green-but-empty jar. 26.2-fabric (41 classes) and 26.2-neoforge (42
-classes) are the newest additions — see "26.2" below for the full API-delta
-list. All work is committed and pushed to `origin/main` — see "Parked
-commits" below for how the earlier signing outage was resolved.
+38/38 target cells build green (`./gradlew chiseledBuild` + `./gradlew test` passing across the full 19-version matrix: Fabric+Forge for `1.18.2`, `1.19.4`, `1.20.1`, `1.20.4`; Fabric+NeoForge for `1.20.6`–`26.3`). Note: on `1.21.9-fabric` (`fabric-api 0.134.1+1.21.9`), Fabric API temporarily removed `WorldRenderEvents` before restoring `world.WorldRenderEvents` in `1.21.10`, so `1.21.9-fabric` registers HUD + tick hooks only.
 
-Newest stable MC confirmed live against
-`https://meta.fabricmc.net/v2/versions/game` at task start: **26.2**
-(calendar versioning — this is not a typo for 1.21.4/1.26 etc).
+Newest stable MC: **26.3**.
 
 Porting order: **1.21.4-fabric → 1.21.4-neoforge → 1.20.1-fabric →
 1.20.1-forge → 1.19.4-fabric → 1.19.4-forge → 1.18.2-fabric →

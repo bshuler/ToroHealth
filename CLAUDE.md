@@ -215,7 +215,7 @@ guard, gated `if (mod.isNeoforge)`, and the Forge
 ```
 
 A bare `./gradlew test` runs the suite on **every** cell, not just the
-active one — so any new test must compile and pass on all ten, 1.18.2
+active one — so any new test must compile and pass on all 38 cells, 1.18.2
 included. (An earlier revision of this document claimed tests run only
 against the active node and "**never** across the full matrix"; that was
 wrong, and the Tier 1 work below depends on it being wrong.) The active
@@ -258,7 +258,7 @@ for the pure `pollEvents()` branch logic.
 `src/test/java/net/torocraft/torohealth/LoadedGameTest.java` runs against a
 **real, bootstrapped Minecraft and a real Fabric loader**, not mocks, via
 `net.fabricmc:fabric-loader-junit:0.19.3`. Nine tests, verified green on all
-five Fabric cells (1.18.2, 1.19.4, 1.20.1, 1.21.4, 26.2). The whole file is
+19 Fabric cells (1.18.2 through 26.3). The whole file is
 wrapped in `//? if fabric { … //?}` and the dependency is gated
 `if (mod.isFabric)`, because NeoForge's equivalent bootstrap (`junit-fml`) is
 reachable only from ModDevGradle, not from Architectury Loom — see the long

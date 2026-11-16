@@ -2,16 +2,13 @@ package net.torocraft.torohealth.display;
 
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
-//? if >=26.1 {
-/*// 26.2 moved these two entity classes into new dedicated sub-packages
-// (confirmed via javap against the real minecraft-merged-deobf-26.2.jar);
-// Ghast stayed put.
-import net.minecraft.world.entity.animal.chicken.Chicken;
+//? if >=1.21.11 {
+/*import net.minecraft.world.entity.animal.chicken.Chicken;
 *///?} else {
 import net.minecraft.world.entity.animal.Chicken;
 //?}
 import net.minecraft.world.entity.monster.Ghast;
-//? if >=26.1 {
+//? if >=1.21.11 {
 /*import net.minecraft.world.entity.npc.villager.Villager;
 *///?} else {
 import net.minecraft.world.entity.npc.Villager;

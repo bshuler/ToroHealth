@@ -9,6 +9,9 @@ import net.minecraft.client.Minecraft;
 //? if >=26.1 {
 /*import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+*///?} elif >=1.21.11 {
+/*import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 *///?} else {
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -123,9 +126,17 @@ public class HealthBarRenderer {
 
     Minecraft client = Minecraft.getInstance();
     MultiBufferSource.BufferSource bufferSource = client.renderBuffers().bufferSource();
+    //? if >=1.21.11 {
+    /*VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderTypes.lines());
+    *///?} else {
     VertexConsumer vertexConsumer = bufferSource.getBuffer(RenderType.lines());
+    //?}
 
+    //? if >=1.21.11 {
+    /*Vec3 cameraPos = camera.position();
+    *///?} else {
     Vec3 cameraPos = camera.getPosition();
+    //?}
 
     for (LivingEntity entity : renderedEntities) {
       if (entity == null || !entity.isAlive()) {
@@ -144,7 +155,11 @@ public class HealthBarRenderer {
       poseStack.popPose();
     }
 
+    //? if >=1.21.11 {
+    /*bufferSource.endBatch(RenderTypes.lines());
+    *///?} else {
     bufferSource.endBatch(RenderType.lines());
+    //?}
     renderedEntities.clear();
   }
   //?}

@@ -6,7 +6,7 @@ import net.minecraft.network.chat.Component;
 //? if <1.19 {
 /*import net.minecraft.network.chat.TextComponent;
 *///?}
-//? if >=26.1 {
+//? if >=1.21.11 {
 /*import net.minecraft.resources.Identifier;
 *///?} else {
 import net.minecraft.resources.ResourceLocation;
@@ -37,7 +37,7 @@ import net.minecraft.client.gui.GuiGraphics;
  * mirroring the sibling mod FlightHud's canvas-abstraction pattern.
  */
 public class Hud extends Screen {
-  //? if >=26.1 {
+  //? if >=1.21.11 {
   /*private static final Identifier BACKGROUND_TEXTURE =
       Identifier.fromNamespaceAndPath(ToroHealth.MODID, "textures/gui/default_skin_basic.png");
   *///?} elif >=1.21 {
@@ -90,12 +90,8 @@ public class Hud extends Screen {
     //? if <1.19 {
     /*super(new TextComponent("ToroHealth HUD"));
     this.minecraft = Minecraft.getInstance();
-    *///?} elif >=26.1 {
-    /*// Screen.minecraft is `final` in 26.2 (confirmed via javap); the new
-    // 3-arg Screen(Minecraft, Font, Component) constructor lets a subclass
-    // supply it at construction time instead of assigning the field
-    // afterward, which no longer compiles against a final field.
-    super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("ToroHealth HUD"));
+    *///?} elif >=1.21.11 {
+    /*super(Minecraft.getInstance(), Minecraft.getInstance().font, Component.literal("ToroHealth HUD"));
     *///?} else {
     super(Component.literal("ToroHealth HUD"));
     this.minecraft = Minecraft.getInstance();

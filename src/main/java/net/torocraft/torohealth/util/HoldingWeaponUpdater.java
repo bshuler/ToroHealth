@@ -9,9 +9,8 @@ import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.PotionItem;
-//? if >=26.1 {
-/*// SwordItem is gone entirely in 26.2 (confirmed via javap - no class of that
-// name survives anywhere in the jar; swords are now a plain Item carrying
+//? if >=1.21.5 {
+/*// SwordItem is gone starting 1.21.5 (swords are now a plain Item carrying
 // components, identified only via the ItemTags.SWORDS tag).
 import net.minecraft.tags.ItemTags;
 *///?} else {
@@ -51,11 +50,8 @@ public class HoldingWeaponUpdater {
     //? if >=26.3 {
     /*boolean isSword = item.builtInRegistryHolder().is(ItemTags.SWORDS);
     boolean isAxe = item.builtInRegistryHolder().is(ItemTags.AXES);
-    *///?} elif >=26.1 {
-    /*// Holder.is(TagKey) (confirmed via javap) is the 26.2 replacement for the
-    // old ItemStack.is(TagKey)/SwordItem-instanceof checks - ItemStack itself
-    // only exposes the generic Predicate<Holder<Item>> overload now.
-    boolean isSword = item.builtInRegistryHolder().is(ItemTags.SWORDS);
+    *///?} elif >=1.21.5 {
+    /*boolean isSword = item.builtInRegistryHolder().is(ItemTags.SWORDS);
     boolean isAxe = item instanceof AxeItem;
     *///?} else {
     boolean isSword = item instanceof SwordItem;

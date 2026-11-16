@@ -161,6 +161,46 @@ public class LoadedGameTest {
                 "the built-in data pack yielded item tags but not minecraft:swords");
         items.bindTags(tags);
         items.freeze();
+        *///?} elif >=1.21.11 {
+        /*net.minecraft.core.WritableRegistry<Item> items =
+                (net.minecraft.core.WritableRegistry<Item>) (net.minecraft.core.Registry<Item>)
+                        net.minecraft.core.registries.BuiltInRegistries.ITEM;
+        java.util.Map<net.minecraft.resources.Identifier, java.util.List<net.minecraft.core.Holder<Item>>> rawTags;
+        try (net.minecraft.server.packs.resources.CloseableResourceManager vanillaData =
+                     new net.minecraft.server.packs.resources.MultiPackResourceManager(
+                             net.minecraft.server.packs.PackType.SERVER_DATA,
+                             java.util.List.of(net.minecraft.server.packs.repository.ServerPacksSource
+                                     .createVanillaPackSource()))) {
+            net.minecraft.tags.TagLoader<net.minecraft.core.Holder<Item>> loader =
+                    new net.minecraft.tags.TagLoader<>(
+                            net.minecraft.tags.TagLoader.ElementLookup.fromWritableRegistry(items),
+                            net.minecraft.core.registries.Registries.tagsDirPath(net.minecraft.core.registries.Registries.ITEM));
+            rawTags = loader.build(loader.load(vanillaData));
+        }
+        assertFalse(rawTags.isEmpty(), "no vanilla item tags were read out of the built-in data pack");
+        rawTags.forEach((id, holders) ->
+                items.bindTag(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, id), holders));
+        items.freeze();
+        *///?} elif >=1.21.5 {
+        /*net.minecraft.core.WritableRegistry<Item> items =
+                (net.minecraft.core.WritableRegistry<Item>) (net.minecraft.core.Registry<Item>)
+                        net.minecraft.core.registries.BuiltInRegistries.ITEM;
+        java.util.Map<net.minecraft.resources.ResourceLocation, java.util.List<net.minecraft.core.Holder<Item>>> rawTags;
+        try (net.minecraft.server.packs.resources.CloseableResourceManager vanillaData =
+                     new net.minecraft.server.packs.resources.MultiPackResourceManager(
+                             net.minecraft.server.packs.PackType.SERVER_DATA,
+                             java.util.List.of(net.minecraft.server.packs.repository.ServerPacksSource
+                                     .createVanillaPackSource()))) {
+            net.minecraft.tags.TagLoader<net.minecraft.core.Holder<Item>> loader =
+                    new net.minecraft.tags.TagLoader<>(
+                            net.minecraft.tags.TagLoader.ElementLookup.fromWritableRegistry(items),
+                            net.minecraft.core.registries.Registries.tagsDirPath(net.minecraft.core.registries.Registries.ITEM));
+            rawTags = loader.build(loader.load(vanillaData));
+        }
+        assertFalse(rawTags.isEmpty(), "no vanilla item tags were read out of the built-in data pack");
+        rawTags.forEach((id, holders) ->
+                items.bindTag(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM, id), holders));
+        items.freeze();
         *///?}
     }
 
@@ -391,7 +431,7 @@ public class LoadedGameTest {
         //? if >=26.3 {
         /*boolean isSword = item.builtInRegistryHolder().is(net.minecraft.tags.ItemTags.SWORDS);
         boolean isAxe = item.builtInRegistryHolder().is(net.minecraft.tags.ItemTags.AXES);
-        *///?} elif >=26.1 {
+        *///?} elif >=1.21.5 {
         /*boolean isSword = item.builtInRegistryHolder().is(net.minecraft.tags.ItemTags.SWORDS);
         boolean isAxe = item instanceof AxeItem;
         *///?} else {

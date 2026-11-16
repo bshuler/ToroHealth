@@ -3,7 +3,7 @@ package net.torocraft.torohealth;
 import com.mojang.logging.LogUtils;
 import java.io.File;
 import java.util.Random;
-//? if >=26.1 {
+//? if >=1.21.11 {
 /*import net.minecraft.resources.Identifier;
 *///?} else {
 import net.minecraft.resources.ResourceLocation;
@@ -14,13 +14,13 @@ import net.torocraft.torohealth.display.Hud;
 import net.torocraft.torohealth.util.RayTrace;
 import org.slf4j.Logger;
 
-//? if fabric && >=26.1 {
+//? if fabric && >=1.21.11 {
 /*import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 *///?} elif fabric {
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-//?} elif neoforge && >=26.1 {
+//?} elif neoforge && >=1.21.11 {
 /*import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLPaths;
@@ -56,7 +56,7 @@ import net.minecraftforge.fml.loading.FMLPaths;
  * than a version conditional nested inside a loader conditional, per this
  * project's flat-chain-only rule.
  */
-//? if fabric && >=26.1 {
+//? if fabric && >=1.21.11 {
 /*public class ToroHealth implements ClientModInitializer {
 
   public static final String MODID = "torohealth";
@@ -134,7 +134,7 @@ public class ToroHealth implements ClientModInitializer {
     ClientEventHandler.register();
   }
 }
-//?} elif neoforge && >=26.1 {
+//?} elif neoforge && >=1.21.11 {
 /*@Mod(ToroHealth.MODID)
 public class ToroHealth {
 
@@ -170,6 +170,42 @@ public class ToroHealth {
     loadConfig(FMLPaths.CONFIGDIR.get().toFile());
   }
 }
+*///?} elif neoforge && >=1.21 {
+/*@Mod(ToroHealth.MODID)
+public class ToroHealth {
+
+  public static final String MODID = "torohealth";
+  public static final Logger LOGGER = LogUtils.getLogger();
+  public static final Random RAND = new Random();
+
+  public static final RayTrace RAYTRACE = new RayTrace();
+  public static final Hud HUD = new Hud();
+
+  public static volatile Config CONFIG = new Config();
+  public static volatile boolean IS_HOLDING_WEAPON = false;
+
+  private static ConfigLoader<Config> configLoader;
+
+  public static ResourceLocation id(String path) {
+    return ResourceLocation.fromNamespaceAndPath(MODID, path);
+  }
+
+  public static void saveConfig() {
+    if (configLoader != null) {
+      configLoader.save(CONFIG);
+    }
+  }
+
+  private static void loadConfig(File configDir) {
+    configLoader = new ConfigLoader<>(new Config(), configDir, MODID + ".json",
+        config -> CONFIG = config);
+    configLoader.load();
+  }
+
+  public ToroHealth(IEventBus modEventBus) {
+    loadConfig(FMLPaths.CONFIGDIR.get().toFile());
+  }
+}
 *///?} elif neoforge {
 /*@Mod(ToroHealth.MODID)
 public class ToroHealth {
@@ -186,11 +222,8 @@ public class ToroHealth {
 
   private static ConfigLoader<Config> configLoader;
 
-  // NeoForge only ever targets >=1.21 && <26.1 MC versions in this arm (the
-  // 26.1+ arm above handles 26.2's ResourceLocation->Identifier rename), so
-  // no further Stonecutter version split is needed here.
   public static ResourceLocation id(String path) {
-    return ResourceLocation.fromNamespaceAndPath(MODID, path);
+    return new ResourceLocation(MODID, path);
   }
 
   public static void saveConfig() {

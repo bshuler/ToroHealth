@@ -53,6 +53,11 @@ public class ParticleRenderer {
       BarParticle particle, Camera camera) {
     Vec3 cameraPos = camera.position();
     double distanceSquared = cameraPos.distanceToSqr(particle.x, particle.y, particle.z);
+  *///?} elif >=1.21.11 {
+  /*private static void renderParticle(PoseStack poseStack, MultiBufferSource bufferSource,
+      BarParticle particle, Camera camera) {
+    Vec3 cameraPos = camera.position();
+    double distanceSquared = cameraPos.distanceToSqr(particle.x, particle.y, particle.z);
   *///?} else {
   private static void renderParticle(PoseStack poseStack, MultiBufferSource bufferSource,
       BarParticle particle, Camera camera) {

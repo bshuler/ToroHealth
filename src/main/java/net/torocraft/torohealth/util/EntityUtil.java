@@ -6,16 +6,13 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ambient.AmbientCreature;
-//? if >=26.1 {
-/*// 26.2 moved these three entity classes into new dedicated sub-packages
-// (confirmed via javap against the real minecraft-merged-deobf-26.2.jar);
-// every other entity type referenced by this class stayed put.
-import net.minecraft.world.entity.animal.fish.AbstractFish;
+//? if >=1.21.11 {
+/*import net.minecraft.world.entity.animal.fish.AbstractFish;
 *///?} else {
 import net.minecraft.world.entity.animal.AbstractFish;
 //?}
 import net.minecraft.world.entity.animal.Animal;
-//? if >=26.1 {
+//? if >=1.21.11 {
 /*import net.minecraft.world.entity.animal.squid.Squid;
 *///?} else {
 import net.minecraft.world.entity.animal.Squid;
@@ -24,7 +21,7 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.monster.Monster;
-//? if >=26.1 {
+//? if >=26.2 {
 /*import net.minecraft.world.entity.monster.cubemob.Slime;
 *///?} else {
 import net.minecraft.world.entity.monster.Slime;

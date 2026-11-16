@@ -28,14 +28,10 @@ public class BarParticle {
   public BarParticle(Entity entity, int damage) {
     Minecraft client = Minecraft.getInstance();
     Vec3 entityLocation = entity.position().add(0, entity.getBbHeight() / 2, 0);
-    //? if >=26.1 {
-    /*// GameRenderer.getMainCamera() was renamed mainCamera() and
-    // Camera.getPosition() was renamed position() in 26.2 (both confirmed via
-    // javap - neither old name survives at all; mainCamera() matches the call
-    // already used elsewhere in this port, e.g. ClientEventHandler's >=26.1
-    // world-render hooks, and position() matches ParticleRenderer's own
-    // >=26.1 branch).
-    Vec3 cameraLocation = client.gameRenderer.mainCamera().position();
+    //? if >=26.2 {
+    /*Vec3 cameraLocation = client.gameRenderer.mainCamera().position();
+    *///?} elif >=1.21.11 {
+    /*Vec3 cameraLocation = client.gameRenderer.getMainCamera().position();
     *///?} else {
     Vec3 cameraLocation = client.gameRenderer.getMainCamera().getPosition();
     //?}
