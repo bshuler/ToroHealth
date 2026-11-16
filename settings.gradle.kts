@@ -36,6 +36,7 @@ stonecutter {
 
         // Newest stable Minecraft per https://meta.fabricmc.net/v2/versions/game
         // (checked live - do not trust training-data memory) is 26.2.
+        mc("26.3", "fabric", "neoforge")
         mc("26.2", "fabric", "neoforge")
 
         // 1.21.4 - Fabric + NeoForge (last classic-numbered Yarn-mapped target)

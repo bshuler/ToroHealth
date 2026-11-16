@@ -2,7 +2,9 @@ package net.torocraft.torohealth.util;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
+//? if <26.3 {
 import net.minecraft.world.item.AxeItem;
+//?}
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
@@ -46,16 +48,21 @@ public class HoldingWeaponUpdater {
 
   private static boolean isWeapon(ItemStack stack) {
     var item = stack.getItem();
-    //? if >=26.1 {
+    //? if >=26.3 {
+    /*boolean isSword = item.builtInRegistryHolder().is(ItemTags.SWORDS);
+    boolean isAxe = item.builtInRegistryHolder().is(ItemTags.AXES);
+    *///?} elif >=26.1 {
     /*// Holder.is(TagKey) (confirmed via javap) is the 26.2 replacement for the
     // old ItemStack.is(TagKey)/SwordItem-instanceof checks - ItemStack itself
     // only exposes the generic Predicate<Holder<Item>> overload now.
     boolean isSword = item.builtInRegistryHolder().is(ItemTags.SWORDS);
+    boolean isAxe = item instanceof AxeItem;
     *///?} else {
     boolean isSword = item instanceof SwordItem;
+    boolean isAxe = item instanceof AxeItem;
     //?}
     return isSword
-        || item instanceof AxeItem
+        || isAxe
         || item instanceof TridentItem
         || item instanceof BowItem
         || item instanceof CrossbowItem

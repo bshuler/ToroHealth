@@ -93,7 +93,11 @@ public class HealthBarRenderer {
 
       poseStack.pushPose();
       poseStack.translate(offset.x, offset.y, offset.z);
+      //? if >=26.3 {
+      poseStack.mulPose(new org.joml.Matrix4f().rotate(camera.rotation()));
+      //?} else {
       poseStack.mulPose(camera.rotation());
+      //?}
 
       // 26.2 replaced immediate MultiBufferSource-based rendering with a
       // two-phase "record a geometry callback now, draw it later" submit-node

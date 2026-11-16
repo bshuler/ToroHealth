@@ -11,7 +11,9 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
+//? if <26.3 {
 import net.minecraft.world.item.AxeItem;
+//?}
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.Item;
@@ -75,7 +77,11 @@ public class LoadedGameTest {
         // (Guarded at 26.1 because that is where this matrix's 26.x line
         // starts - there is no cell between 1.21.4 and 26.2 to narrow it
         // further, and 1.21.4 demonstrably does not need it.)
-        //? if >=26.1 {
+        //? if >=26.3 {
+        /*net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_INITIALIZERS
+                .build(net.minecraft.data.registries.VanillaRegistries.createWorldLookup())
+                .forEach(net.minecraft.core.component.DataComponentInitializers.PendingComponents::apply);
+        *///?} elif >=26.1 {
         /*net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_INITIALIZERS
                 .build(net.minecraft.data.registries.VanillaRegistries.createLookup())
                 .forEach(net.minecraft.core.component.DataComponentInitializers.PendingComponents::apply);
@@ -138,8 +144,13 @@ public class LoadedGameTest {
         try (net.minecraft.server.packs.resources.CloseableResourceManager vanillaData =
                      new net.minecraft.server.packs.resources.MultiPackResourceManager(
                              net.minecraft.server.packs.PackType.SERVER_DATA,
+                             //? if >=26.3 {
+                             java.util.List.of(net.minecraft.server.packs.repository.ServerPacksSource
+                                     .createVanillaPackSource().fullResources()))) {
+                             //?} else {
                              java.util.List.of(net.minecraft.server.packs.repository.ServerPacksSource
                                      .createVanillaPackSource()))) {
+                             //?}
             tags = net.minecraft.tags.TagLoader.loadTagsForRegistry(
                     vanillaData,
                     net.minecraft.core.registries.Registries.ITEM,
@@ -377,13 +388,18 @@ public class LoadedGameTest {
      * if the version split there changes, change it here.
      */
     private static boolean isWeapon(Item item) {
-        //? if >=26.1 {
+        //? if >=26.3 {
         /*boolean isSword = item.builtInRegistryHolder().is(net.minecraft.tags.ItemTags.SWORDS);
+        boolean isAxe = item.builtInRegistryHolder().is(net.minecraft.tags.ItemTags.AXES);
+        *///?} elif >=26.1 {
+        /*boolean isSword = item.builtInRegistryHolder().is(net.minecraft.tags.ItemTags.SWORDS);
+        boolean isAxe = item instanceof AxeItem;
         *///?} else {
         boolean isSword = item instanceof net.minecraft.world.item.SwordItem;
+        boolean isAxe = item instanceof AxeItem;
         //?}
         return isSword
-                || item instanceof AxeItem
+                || isAxe
                 || item instanceof TridentItem
                 || item instanceof BowItem
                 || item instanceof CrossbowItem
